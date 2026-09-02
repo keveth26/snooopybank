@@ -2,9 +2,12 @@ name = "snoopy-bank"
 compatibility_date = "2024-09-01"
 pages_build_output_dir = "dist"
 
-# Enlace a base de datos Cloudflare D1
-[[d1_databases]]
-binding = "DB"
-database_name = "snoopy-db"
-database_id = "snoopy-bank-db-id" # Reemplazar con el ID devuelto por 'npx wrangler d1 create snoopy-db'
-migrations_dir = "./"
+# Configuración de base de datos Cloudflare D1 opcional:
+# Si deseas vincular D1, la forma recomendada en Cloudflare Pages es:
+# En Cloudflare Dashboard > Workers & Pages > tu proyecto > Settings > Functions > D1 database bindings > Variable name: DB
+# O puedes descomentar estas líneas colocando el UUID real generado con 'npx wrangler d1 create snoopy-db':
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "snoopy-db"
+# database_id = "TU-UUID-REAL-AQUI"
+# migrations_dir = "./"
