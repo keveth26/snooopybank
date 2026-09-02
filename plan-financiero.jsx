@@ -2116,83 +2116,155 @@ export default function App() {
 
                   {/* Apartados: Ahorro Programado vs Dinero Libre SEPARADOS */}
                   <div className="glass-inner-panel">
-                    <h3>Ahorro y Dinero Libre (Separados)</h3>
+                    <h3>
+                      Ahorro y Dinero Libre
+                      {filtroPersonaHome !== "ambos" ? ` (${filtroPersonaHome === "david" ? "David" : "Eveth"})` : " (Separados)"}
+                    </h3>
 
-                    {/* Ahorro Programado (Entra a la alcancía) */}
-                    <div className="glass-item-row check-item row-ahorro-prog">
-                      <button
-                        className={"glass-check " + (active.ahorroProgramado?.pagado ? "checked" : "")}
-                        onClick={toggleAhorroPagado}
-                      >
-                        {active.ahorroProgramado?.pagado && <Check size={13} strokeWidth={3} />}
-                      </button>
-                      <div className="concept-title">
-                        <span className="concept-text">Ahorro para la alcancía</span>
-                        <span className="badge-tag-ahorro">🏦 Se guarda al cerrar</span>
-                      </div>
-                      <SegmentedPersonBadge
-                        value={
-                          !active.ahorroProgramado?.pagado
-                            ? active.ahorroProgramado?.asignado
-                            : active.ahorroProgramado?.pagadoPor || active.ahorroProgramado?.asignado
-                        }
-                        onChange={(p) =>
-                          !active.ahorroProgramado?.pagado
-                            ? setActive({ ...active, ahorroProgramado: { ...active.ahorroProgramado, asignado: p } })
-                            : setActive({ ...active, ahorroProgramado: { ...active.ahorroProgramado, pagadoPor: p } })
-                        }
-                        title="Quién lo aparta"
-                      />
-                      <input
-                        type="number"
-                        className="glass-input-sm text-right"
-                        value={active.ahorroProgramado?.monto || 0}
-                        onChange={(e) =>
-                          setActive({
-                            ...active,
-                            ahorroProgramado: { ...active.ahorroProgramado, monto: Number(e.target.value) },
-                          })
-                        }
-                      />
-                    </div>
+                    {(() => {
+                      const ahorroAsignado = !active.ahorroProgramado?.pagado
+                        ? (active.ahorroProgramado?.asignado || "david")
+                        : (active.ahorroProgramado?.pagadoPor || active.ahorroProgramado?.asignado || "david");
 
-                    {/* Dinero Libre (Ocio / Salidas personales) */}
-                    <div className="glass-item-row check-item row-dinero-libre">
-                      <button
-                        className={"glass-check " + (active.dineroLibre?.pagado ? "checked" : "")}
-                        onClick={toggleDineroLibrePagado}
-                      >
-                        {active.dineroLibre?.pagado && <Check size={13} strokeWidth={3} />}
-                      </button>
-                      <div className="concept-title">
-                        <span className="concept-text">Dinero libre / bolsillo</span>
-                        <span className="badge-tag-libre">☕ Gustos sin culpa</span>
-                      </div>
-                      <SegmentedPersonBadge
-                        value={
-                          !active.dineroLibre?.pagado
-                            ? active.dineroLibre?.asignado
-                            : active.dineroLibre?.pagadoPor || active.dineroLibre?.asignado
-                        }
-                        onChange={(p) =>
-                          !active.dineroLibre?.pagado
-                            ? setActive({ ...active, dineroLibre: { ...active.dineroLibre, asignado: p } })
-                            : setActive({ ...active, dineroLibre: { ...active.dineroLibre, pagadoPor: p } })
-                        }
-                        title="Quién lo asume"
-                      />
-                      <input
-                        type="number"
-                        className="glass-input-sm text-right"
-                        value={active.dineroLibre?.monto || 0}
-                        onChange={(e) =>
-                          setActive({
-                            ...active,
-                            dineroLibre: { ...active.dineroLibre, monto: Number(e.target.value) },
-                          })
-                        }
-                      />
-                    </div>
+                      const libreAsignado = !active.dineroLibre?.pagado
+                        ? (active.dineroLibre?.asignado || "david")
+                        : (active.dineroLibre?.pagadoPor || active.dineroLibre?.asignado || "david");
+
+                      const showAhorro = filtroPersonaHome === "ambos" || ahorroAsignado === filtroPersonaHome;
+                      const showLibre = filtroPersonaHome === "ambos" || libreAsignado === filtroPersonaHome;
+
+                      if (!showAhorro && !showLibre) {
+                        return (
+                          <p className="sub-hint" style={{ padding: "8px 0" }}>
+                            No tienes ahorro ni dinero libre asignados a tu cargo en esta quincena.
+                          </p>
+                        );
+                      }
+
+                      return (
+                        <>
+                          {/* Ahorro Programado (Entra a la alcancía) */}
+                          {showAhorro && (
+                            filtroPersonaHome !== "ambos" ? (
+                              <div className={"glass-item-row check-item row-ahorro-prog " + (active.ahorroProgramado?.pagado ? "is-paid" : "")}>
+                                <button
+                                  className={"glass-check " + (active.ahorroProgramado?.pagado ? "checked" : "")}
+                                  onClick={toggleAhorroPagado}
+                                  title={active.ahorroProgramado?.pagado ? "Marcar como pendiente" : "Marcar como apartado"}
+                                >
+                                  {active.ahorroProgramado?.pagado && <Check size={13} strokeWidth={3} />}
+                                </button>
+                                <div className="concept-title">
+                                  <span className="concept-text">Ahorro para la alcancía</span>
+                                  <span className="badge-tag-ahorro">🏦 Se guarda al cerrar</span>
+                                </div>
+                                <div className="single-debt-amount-pill save-pill-border">
+                                  <span className="single-debt-label">Debes apartar:</span>
+                                  <strong className="single-debt-value">{fmt(active.ahorroProgramado?.monto || 0)}</strong>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="glass-item-row check-item row-ahorro-prog">
+                                <button
+                                  className={"glass-check " + (active.ahorroProgramado?.pagado ? "checked" : "")}
+                                  onClick={toggleAhorroPagado}
+                                >
+                                  {active.ahorroProgramado?.pagado && <Check size={13} strokeWidth={3} />}
+                                </button>
+                                <div className="concept-title">
+                                  <span className="concept-text">Ahorro para la alcancía</span>
+                                  <span className="badge-tag-ahorro">🏦 Se guarda al cerrar</span>
+                                </div>
+                                <SegmentedPersonBadge
+                                  value={
+                                    !active.ahorroProgramado?.pagado
+                                      ? active.ahorroProgramado?.asignado
+                                      : active.ahorroProgramado?.pagadoPor || active.ahorroProgramado?.asignado
+                                  }
+                                  onChange={(p) =>
+                                    !active.ahorroProgramado?.pagado
+                                      ? setActive({ ...active, ahorroProgramado: { ...active.ahorroProgramado, asignado: p } })
+                                      : setActive({ ...active, ahorroProgramado: { ...active.ahorroProgramado, pagadoPor: p } })
+                                  }
+                                  title="Quién lo aparta"
+                                />
+                                <input
+                                  type="number"
+                                  className="glass-input-sm text-right"
+                                  value={active.ahorroProgramado?.monto || 0}
+                                  onChange={(e) =>
+                                    setActive({
+                                      ...active,
+                                      ahorroProgramado: { ...active.ahorroProgramado, monto: Number(e.target.value) },
+                                    })
+                                  }
+                                />
+                              </div>
+                            )
+                          )}
+
+                          {/* Dinero Libre (Ocio / Salidas personales) */}
+                          {showLibre && (
+                            filtroPersonaHome !== "ambos" ? (
+                              <div className={"glass-item-row check-item row-dinero-libre " + (active.dineroLibre?.pagado ? "is-paid" : "")}>
+                                <button
+                                  className={"glass-check " + (active.dineroLibre?.pagado ? "checked" : "")}
+                                  onClick={toggleDineroLibrePagado}
+                                  title={active.dineroLibre?.pagado ? "Marcar como pendiente" : "Marcar como apartado"}
+                                >
+                                  {active.dineroLibre?.pagado && <Check size={13} strokeWidth={3} />}
+                                </button>
+                                <div className="concept-title">
+                                  <span className="concept-text">Dinero libre / bolsillo</span>
+                                  <span className="badge-tag-libre">☕ Gustos sin culpa</span>
+                                </div>
+                                <div className="single-debt-amount-pill libre-pill-border">
+                                  <span className="single-debt-label">Tu dinero libre:</span>
+                                  <strong className="single-debt-value">{fmt(active.dineroLibre?.monto || 0)}</strong>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="glass-item-row check-item row-dinero-libre">
+                                <button
+                                  className={"glass-check " + (active.dineroLibre?.pagado ? "checked" : "")}
+                                  onClick={toggleDineroLibrePagado}
+                                >
+                                  {active.dineroLibre?.pagado && <Check size={13} strokeWidth={3} />}
+                                </button>
+                                <div className="concept-title">
+                                  <span className="concept-text">Dinero libre / bolsillo</span>
+                                  <span className="badge-tag-libre">☕ Gustos sin culpa</span>
+                                </div>
+                                <SegmentedPersonBadge
+                                  value={
+                                    !active.dineroLibre?.pagado
+                                      ? active.dineroLibre?.asignado
+                                      : active.dineroLibre?.pagadoPor || active.dineroLibre?.asignado
+                                  }
+                                  onChange={(p) =>
+                                    !active.dineroLibre?.pagado
+                                      ? setActive({ ...active, dineroLibre: { ...active.dineroLibre, asignado: p } })
+                                      : setActive({ ...active, dineroLibre: { ...active.dineroLibre, pagadoPor: p } })
+                                  }
+                                  title="Quién lo asume"
+                                />
+                                <input
+                                  type="number"
+                                  className="glass-input-sm text-right"
+                                  value={active.dineroLibre?.monto || 0}
+                                  onChange={(e) =>
+                                    setActive({
+                                      ...active,
+                                      dineroLibre: { ...active.dineroLibre, monto: Number(e.target.value) },
+                                    })
+                                  }
+                                />
+                              </div>
+                            )
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -4418,6 +4490,22 @@ body, html {
   font-size: 16px;
   font-weight: 700;
   color: var(--amber-dark);
+}
+.save-pill-border {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.28);
+}
+.save-pill-border .single-debt-label,
+.save-pill-border .single-debt-value {
+  color: var(--blue-dark);
+}
+.libre-pill-border {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.28);
+}
+.libre-pill-border .single-debt-label,
+.libre-pill-border .single-debt-value {
+  color: #6d28d9;
 }
 @media (max-width: 640px) {
   .single-person-debt-card {
