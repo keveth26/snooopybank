@@ -1322,7 +1322,7 @@ export default function App() {
           <div className="drawer-brand">
             <img src="/snoopy-logo.jpg" alt="Snoopy Bank" className="drawer-logo" />
             <div className="drawer-brand-text">
-              <span className="drawer-badge">David &amp; Eveth</span>
+              <span className="drawer-badge">Planificador Familiar</span>
               <h3 className="drawer-title">Snoopy Bank</h3>
             </div>
           </div>
@@ -1423,7 +1423,7 @@ export default function App() {
         </nav>
 
         <div className="drawer-footer">
-          <p>Snoopy Bank • Finanzas David &amp; Eveth</p>
+          <p>Snoopy Bank • Finanzas Familiares</p>
         </div>
       </aside>
 
@@ -1455,22 +1455,9 @@ export default function App() {
                 />
               </div>
               <div className="header-headings">
-                <div className="brand-badge">
-                  <Sparkles size={11} className="sparkle-icon" />
-                  <span>David &amp; Eveth</span>
-                </div>
                 <h1 className="hero-title">Snoopy Bank</h1>
                 <p className="hero-subtitle">Gestor familiar y pagos</p>
               </div>
-            </div>
-
-            {/* En celular: indicador rápido de la pestaña activa */}
-            <div className="mobile-active-tag">
-              {activeTab === "home" && <span>🏠 Quincena</span>}
-              {activeTab === "programados" && <span>📅 Futuros</span>}
-              {activeTab === "deudas" && <span>💳 Deudas</span>}
-              {activeTab === "ahorros" && <span>🐷 Ahorros</span>}
-              {activeTab === "historico" && <span>📜 Histórico</span>}
             </div>
           </div>
 
@@ -4739,38 +4726,238 @@ body, html {
   display: inline-block;
 }
 
-/* Mejoras Responsive Globales */
+/* Desactivar spinners en inputs numéricos para mayor espacio visual */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+/* Mejoras Responsive Globales para Celulares */
 @media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden;
+  }
   .glass-root {
-    padding: 12px 10px 70px;
+    padding: 8px 6px 70px;
+    overflow-x: hidden;
+  }
+  .glass-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
   .glass-card {
-    padding: 16px 12px;
-    border-radius: 18px;
-    margin-bottom: 16px;
+    padding: 14px 10px;
+    border-radius: 16px;
+    margin-bottom: 14px;
+    overflow-x: hidden;
   }
   .glass-inner-panel {
-    padding: 14px 10px;
+    padding: 12px 10px;
     border-radius: 14px;
   }
+
+  /* Filas de Gastos Fijos, Programados e Imprevistos con Checkbox */
+  .glass-item-row.check-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 10px 8px;
+    gap: 8px 6px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(226, 232, 240, 0.75);
+    border-radius: 12px;
+    margin-bottom: 8px;
+  }
+  .glass-item-row.check-item .glass-check {
+    order: 1;
+    flex-shrink: 0;
+  }
+  .glass-item-row.check-item .concept-title {
+    order: 2;
+    flex: 1 1 calc(100% - 36px);
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 0;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+  .glass-item-row.check-item .segmented-badge {
+    order: 3;
+    margin-left: 32px;
+    flex-shrink: 0;
+  }
+  .glass-item-row.check-item .glass-input-sm {
+    order: 4;
+    flex: 1 1 110px;
+    min-width: 100px;
+    max-width: 140px;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 7px 10px;
+    text-align: right;
+    margin-left: auto;
+  }
+  .glass-item-row.check-item .icon-btn-del {
+    order: 5;
+    flex-shrink: 0;
+    padding: 6px;
+  }
+
+  /* Filas estándar (Sueldos David / Eveth, Totales) */
+  .glass-item-row:not(.check-item) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 2px;
+  }
+  .glass-item-row:not(.check-item) .glass-input-sm {
+    min-width: 110px;
+    max-width: 140px;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 7px 10px;
+  }
+
+  /* Segmented Badge en móvil */
+  .segmented-opt {
+    padding: 5px 9px;
+    font-size: 12px;
+  }
+
+  /* Card de Abono a Deudas */
+  .debt-abono-card {
+    padding: 12px 10px;
+  }
+  .dac-actions-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .dac-amount-box {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .dac-monto-input {
+    min-width: 110px !important;
+    max-width: 140px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+  }
+  .segmented-abono-badge .segmented-opt {
+    padding: 5px 8px;
+    font-size: 11.5px;
+  }
+
+  /* Balances de cuentas de David y Eveth */
+  .accounts-split-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .balance-card {
+    padding: 14px 12px;
+  }
+  .balance-header strong {
+    font-size: 17px;
+  }
+  .balance-input {
+    font-size: 22px !important;
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Gastos programados en grid */
+  .scheduled-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Formulario de agregar gasto */
+  .add-item-row-advanced {
+    padding: 12px 8px;
+  }
+  .add-inputs-line {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .add-inputs-line .glass-input,
+  .add-inputs-line .glass-input-sm {
+    width: 100%;
+  }
+  .add-inputs-line .segmented-badge {
+    align-self: flex-start;
+  }
+  .add-actions-line {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .add-actions-line button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Formulario de ingreso extra */
+  .aef-inputs-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+  .aef-actions-row {
+    flex-direction: column;
+  }
+  .aef-actions-row button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Topbar de Quincena Activa */
   .card-topbar {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
   }
   .q-period-selector h2 {
-    font-size: 20px;
+    font-size: 18px;
+    line-height: 1.3;
   }
   .pill-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 6px;
   }
-  .glass-pill {
-    padding: 6px 12px;
-    font-size: 13px;
+  .pill-controls .glass-pill {
+    width: 100%;
+    text-align: center;
+    padding: 8px 6px;
+    font-size: 12.5px;
+  }
+  .pill-controls .glass-select,
+  .pill-controls .anio-input {
+    width: 100%;
+    box-sizing: border-box;
   }
   .close-q-btn {
     width: 100%;
     justify-content: center;
+    font-size: 14px;
+    padding: 12px 14px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* Gráfica Donut */
+  .chart-section {
+    padding: 14px 10px;
   }
   .chart-header {
     flex-direction: column;
@@ -4783,7 +4970,7 @@ body, html {
   .scope-switcher button {
     flex: 1;
     text-align: center;
-    padding: 6px 10px;
+    padding: 7px 10px;
   }
   .donut-wrap {
     flex-direction: column;
@@ -4793,9 +4980,11 @@ body, html {
   .donut-legend {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 8px;
   }
+
+  /* Segmented selector de David/Eveth/Ambos */
   .hpf-header {
     flex-direction: column;
     align-items: stretch;
@@ -4814,36 +5003,9 @@ body, html {
   .hpf-badge {
     display: none;
   }
-  .b-amount {
-    font-size: 24px;
-  }
-  .b-header strong {
-    font-size: 18px;
-  }
-  .b-footer {
-    gap: 8px;
-    font-size: 12px;
-  }
-  .gasto-row {
-    padding: 8px 4px;
-    gap: 6px;
-  }
+
   .two-columns-layout {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 480px) {
-  .donut-legend {
-    grid-template-columns: 1fr;
-  }
-  .pill-controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-  .pill-controls .glass-select,
-  .pill-controls .anio-input {
-    width: 100%;
   }
 }
 
