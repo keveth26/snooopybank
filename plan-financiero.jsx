@@ -2211,9 +2211,19 @@ export default function App() {
 
                     <div className="section-title-flex">
                       <div>
-                        <h3>Abono a Deudas</h3>
+                        <h3>Abono a Deudas ({filteredDebts.length})</h3>
                         <span className="prio-tag">Estrategia Bola de Nieve</span>
                       </div>
+                      <button
+                        type="button"
+                        className="toggle-debts-btn"
+                        onClick={() => setActiveTab("deudas")}
+                        title="Ir a gestionar y ver todas las deudas"
+                      >
+                        <CreditCard size={13} />
+                        <span>Ver y abonar deudas</span>
+                        <ArrowRight size={13} />
+                      </button>
                     </div>
 
                     {/* Vista de Abonos a Deudas según filtroPersonaHome */}
@@ -2224,94 +2234,7 @@ export default function App() {
                           Ver todas las deudas (Ambos)
                         </button>
                       </div>
-                    ) : focalDebtView && !mostrarTodasDeudasHome ? (
-                      <div className="focal-debt-box">
-                        <div className="focal-debt-badge">
-                          🎯 Deuda prioritaria foco {filtroPersonaHome !== "ambos" ? `(${filtroPersonaHome === "david" ? "David" : "Eveth"})` : ""}
-                        </div>
-                        {(() => {
-                          const d = focalDebtView;
-                          const ov = active.abonos[d.id];
-                          const montoSugerido = calculations.suggested[d.id] || 0;
-                          const monto = ov ? ov.monto : montoSugerido;
-                          const pagado = ov ? ov.pagado : false;
-                          const asignado = ov?.asignado || "ambos";
-                          const pagadoPor = ov?.pagadoPor || (pagado ? asignado : null);
-                          const currentPerson = !pagado ? asignado : pagadoPor;
-                          const share = calculations.debtShares[d.id] || { david: 0, eveth: 0 };
-                          const isDue = isDebtDueInActiveQuincena(d.fechaLimite, active.tipo, active.mes, active.anio);
-                          const myShare = filtroPersonaHome === "david" ? (asignado === "david" ? monto : share.david) : (asignado === "eveth" ? monto : share.eveth);
-
-                          return (
-                            <div className={"debt-abono-card focal-card " + (pagado ? "is-paid" : "")} key={d.id}>
-                              <div className="dac-top-line">
-                                <button
-                                  className={"glass-check " + (pagado ? "checked" : "")}
-                                  onClick={() => toggleAbonoPagado(d)}
-                                >
-                                  {pagado && <Check size={14} strokeWidth={3} />}
-                                </button>
-                                <div className="dac-info-col">
-                                  <div className="dac-title-wrap">
-                                    <span className={"concept-title " + (pagado ? "is-done" : "")}>
-                                      <span className="concept-text">{d.concepto}</span>
-                                      {isDue && <span className="badge-tag-due animate-pulse">⏰ Vence esta quincena</span>}
-                                    </span>
-                                  </div>
-                                  <div className="dac-sub-wrap">
-                                    <span className="debt-saldo-sub">Saldo: <strong>{fmt(d.saldo)}</strong></span>
-                                    {asignado === "ambos" && (
-                                      <span className="abono-shares-sub">
-                                        (David: <strong>{fmt(share.david)}</strong> · Eveth: <strong>{fmt(share.eveth)}</strong>)
-                                      </span>
-                                    )}
-                                    {filtroPersonaHome !== "ambos" && (
-                                      <span className="my-share-pill">
-                                        👉 Tu aporte: <strong>{fmt(myShare)}</strong>
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="dac-actions-line">
-                                <SegmentedAbonoBadge
-                                  value={currentPerson}
-                                  onChange={(p) =>
-                                    !pagado
-                                      ? updateAbonoField(d.id, { asignado: p })
-                                      : updateAbonoField(d.id, { pagadoPor: p })
-                                  }
-                                  title="A quién se asigna el pago de este abono"
-                                />
-
-                                <div className="dac-amount-box">
-                                  <span className="dac-input-label">Abonar:</span>
-                                  <input
-                                    type="number"
-                                    className="glass-input-sm text-right font-bold-input dac-monto-input"
-                                    value={monto}
-                                    disabled={pagado}
-                                    onChange={(e) => updateAbonoField(d.id, { monto: Number(e.target.value) })}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })()}
-
-                        {filteredDebts.length > 1 && (
-                          <button
-                            className="toggle-debts-btn"
-                            onClick={() => setMostrarTodasDeudasHome(true)}
-                          >
-                            <ChevronDown size={14} />
-                            <span>Ver y abonar a otras deudas ({filteredDebts.length - 1} más)</span>
-                          </button>
-                        )}
-                      </div>
                     ) : (
-                      /* Vista Completa desplegada si quiere abonar a varias */
                       <div className="items-list">
                         {filteredDebts.map((d) => {
                           const ov = active.abonos[d.id];
@@ -2323,8 +2246,45 @@ export default function App() {
                           const currentPerson = !pagado ? asignado : pagadoPor;
                           const share = calculations.debtShares[d.id] || { david: 0, eveth: 0 };
                           const isDue = isDebtDueInActiveQuincena(d.fechaLimite, active.tipo, active.mes, active.anio);
-                          const myShare = filtroPersonaHome === "david" ? (asignado === "david" ? monto : share.david) : (asignado === "eveth" ? monto : share.eveth);
+                          const myShare = filtroPersonaHome === "david"
+                            ? (asignado === "david" ? monto : share.david)
+                            : (asignado === "eveth" ? monto : share.eveth);
 
+                          // CUANDO SE SELECCIONA UNA SOLA PERSONA (EVETH O DAVID):
+                          // Solo se muestra cuánto debe abonar esa persona directamente
+                          if (filtroPersonaHome !== "ambos") {
+                            return (
+                              <div
+                                className={"debt-abono-card single-person-debt-card " + (pagado ? "is-paid" : "")}
+                                key={d.id}
+                              >
+                                <div className="single-person-debt-flex">
+                                  <button
+                                    className={"glass-check " + (pagado ? "checked" : "")}
+                                    onClick={() => toggleAbonoPagado(d)}
+                                    title={pagado ? "Marcar como pendiente" : "Marcar como pagado"}
+                                  >
+                                    {pagado && <Check size={14} strokeWidth={3} />}
+                                  </button>
+
+                                  <div className="single-debt-info">
+                                    <span className={"concept-title " + (pagado ? "is-done" : "")}>
+                                      <span className="concept-text">{d.concepto}</span>
+                                      {isDue && <span className="badge-tag-due animate-pulse">⏰ Vence esta quincena</span>}
+                                    </span>
+                                  </div>
+
+                                  <div className="single-debt-amount-pill">
+                                    <span className="single-debt-label">Debes abonar:</span>
+                                    <strong className="single-debt-value">{fmt(myShare)}</strong>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // CUANDO ESTÁ EN "AMBOS":
+                          // Muestra la vista completa con saldo, desglose y selector de asignación
                           return (
                             <div className={"debt-abono-card " + (pagado ? "is-paid " : "") + (d.soloCuotaFija ? "item-cuota-fija" : "")} key={d.id}>
                               <div className="dac-top-line">
@@ -2347,11 +2307,6 @@ export default function App() {
                                     {asignado === "ambos" && (
                                       <span className="abono-shares-sub">
                                         (David: <strong>{fmt(share.david)}</strong> · Eveth: <strong>{fmt(share.eveth)}</strong>)
-                                      </span>
-                                    )}
-                                    {filtroPersonaHome !== "ambos" && (
-                                      <span className="my-share-pill">
-                                        👉 Tu aporte: <strong>{fmt(myShare)}</strong>
                                       </span>
                                     )}
                                   </div>
@@ -2383,23 +2338,36 @@ export default function App() {
                             </div>
                           );
                         })}
-
-                        {filteredDebts.length > 1 && (
-                          <button
-                            className="toggle-debts-btn"
-                            onClick={() => setMostrarTodasDeudasHome(false)}
-                          >
-                            <ChevronUp size={14} />
-                            <span>Simplificar y mostrar solo la deuda foco</span>
-                          </button>
-                        )}
                       </div>
                     )}
 
                     <div className="glass-item-row row-total">
-                      <span>Total abonos planeados</span>
+                      <span>
+                        {filtroPersonaHome !== "ambos"
+                          ? `Total abonos de ${filtroPersonaHome === "david" ? "David" : "Eveth"}`
+                          : "Total abonos planeados"}
+                      </span>
                       <strong className={calculations.abonosPlaneados > calculations.disponibleDeudas + 1 ? "text-warn" : ""}>
-                        {fmt(calculations.abonosPlaneados)}
+                        {fmt(
+                          filtroPersonaHome === "ambos"
+                            ? calculations.abonosPlaneados
+                            : filteredDebts.reduce((sum, d) => {
+                                const ov = active.abonos[d.id];
+                                const monto = ov ? ov.monto : (calculations.suggested[d.id] || 0);
+                                const asig = ov?.asignado || "ambos";
+                                const share = calculations.debtShares[d.id] || { david: 0, eveth: 0 };
+                                return (
+                                  sum +
+                                  (filtroPersonaHome === "david"
+                                    ? asig === "david"
+                                      ? monto
+                                      : share.david
+                                    : asig === "eveth"
+                                    ? monto
+                                    : share.eveth)
+                                );
+                              }, 0)
+                        )}
                       </strong>
                     </div>
                   </div>
@@ -4404,6 +4372,66 @@ body, html {
 .dac-monto-input {
   width: 120px !important;
   font-size: 14px;
+}
+
+/* Card de deuda para vista individual (Eveth o David) */
+.single-person-debt-card {
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: 14px;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+.single-person-debt-card.is-paid {
+  background: rgba(240, 253, 244, 0.7);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+.single-person-debt-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.single-debt-info {
+  flex: 1;
+  min-width: 0;
+}
+.single-debt-amount-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  padding: 6px 12px;
+  border-radius: 10px;
+  margin-left: auto;
+}
+.single-debt-label {
+  font-size: 11.5px;
+  color: var(--amber-dark);
+  font-weight: 600;
+}
+.single-debt-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--amber-dark);
+}
+@media (max-width: 640px) {
+  .single-person-debt-card {
+    padding: 10px 10px;
+  }
+  .single-person-debt-flex {
+    gap: 8px;
+  }
+  .single-debt-amount-pill {
+    padding: 5px 10px;
+  }
+  .single-debt-value {
+    font-size: 15px;
+  }
 }
 
 /* 2 Columnas */
