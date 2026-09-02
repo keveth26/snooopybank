@@ -219,13 +219,28 @@ function sanitizeActive(raw) {
   };
 }
 
-function suggestAbonos(disponibleTotal, debts) {
-  let disponible = Math.max(0, disponibleTotal);
-  const ordered = [...debts]
-    .filter((d) => d.saldo > 0 && !d.soloCuotaFija)
-    .sort((a, b) => a.prioridad - b.prioridad);
+function suggestAbonos(disponibleTotal, debts, existingAbonos = {}) {
+  // 1. Cuánto dinero ya fue comprometido explícitamente en active.abonos
+  const yaComprometido = Object.entries(existingAbonos).reduce((s, [, v]) => s + (v?.monto || 0), 0);
+  let disponible = Math.max(0, disponibleTotal - yaComprometido);
+
   const map = {};
+
+  // 2. Si ya hay abonos registrados en active.abonos, respetamos ese monto
+  Object.entries(existingAbonos).forEach(([id, v]) => {
+    map[id] = v?.monto || 0;
+  });
+
+  // 3. Sugerir dinero restante SOLO a deudas que aún no tienen abono definido y tienen saldo
+  const ordered = [...debts]
+    .filter((d) => d.saldo > 0 && !d.soloCuotaFija && !existingAbonos[d.id])
+    .sort((a, b) => a.prioridad - b.prioridad);
+
   for (const d of ordered) {
+    if (disponible <= 0) {
+      map[d.id] = 0;
+      continue;
+    }
     const asignado = Math.min(disponible, d.saldo);
     map[d.id] = asignado;
     disponible -= asignado;
@@ -668,9 +683,9 @@ export default function App() {
 
     const disponibleDeudas = Math.max(0, ingresosBaseTotal + extrasParaDeudas - gastosTotal - ahorroMonto - libreMonto);
 
-    const suggested = suggestAbonos(disponibleDeudas, debts);
+    const suggested = suggestAbonos(disponibleDeudas, debts, active.abonos);
     const orderedDebts = [...debts]
-      .filter((d) => d.saldo > 0)
+      .filter((d) => d.saldo > 0 || (active.abonos && active.abonos[d.id]))
       .sort((a, b) => a.prioridad - b.prioridad);
 
     const abonosPlaneados = orderedDebts.reduce((s, d) => {
@@ -705,6 +720,9 @@ export default function App() {
 
     // 2. Distribución equilibrada de deudas
     const debtShares = {};
+    let remCapDavid = capDavid;
+    let remCapEveth = capEveth;
+
     orderedDebts.forEach((d) => {
       const ov = active.abonos[d.id];
       const monto = ov ? ov.monto : (suggested[d.id] || 0);
@@ -716,18 +734,23 @@ export default function App() {
       if (asignado === "david") {
         davidShare = monto;
         evethShare = 0;
+        remCapDavid = Math.max(0, remCapDavid - davidShare);
       } else if (asignado === "eveth") {
         davidShare = 0;
         evethShare = monto;
+        remCapEveth = Math.max(0, remCapEveth - evethShare);
       } else {
-        // "ambos" - distribución proporcional para alcanzar equilibrio perfecto sin déficits
-        if (capTotal > 0) {
-          davidShare = Math.min(capDavid, Math.round(monto * (capDavid / capTotal)));
+        // "ambos" - distribución proporcional según capacidad restante para evitar que se pase del sueldo
+        const remCapTotal = remCapDavid + remCapEveth;
+        if (remCapTotal > 0) {
+          davidShare = Math.min(remCapDavid, Math.round(monto * (remCapDavid / remCapTotal)));
           evethShare = monto - davidShare;
         } else {
           davidShare = Math.round(monto / 2);
           evethShare = monto - davidShare;
         }
+        remCapDavid = Math.max(0, remCapDavid - davidShare);
+        remCapEveth = Math.max(0, remCapEveth - evethShare);
       }
       debtShares[d.id] = { total: monto, david: davidShare, eveth: evethShare, asignado };
     });
