@@ -879,6 +879,17 @@ export default function App() {
     return filteredDebts[0] || null;
   }, [filtroPersonaHome, calculations?.focalDebt, filteredDebts]);
 
+  const debtsToRender = useMemo(() => {
+    if (filtroPersonaHome !== "ambos") {
+      return filteredDebts;
+    }
+    // En vista "Ambos" (todos): esconder las demás y dejar visible solo la asignada para pago
+    if (!mostrarTodasDeudasHome && focalDebtView) {
+      return [focalDebtView];
+    }
+    return filteredDebts;
+  }, [filtroPersonaHome, filteredDebts, mostrarTodasDeudasHome, focalDebtView]);
+
   const filteredExtras = useMemo(() => {
     if (!active?.ingresosExtras) return [];
     if (filtroPersonaHome === "ambos") return active.ingresosExtras;
@@ -2308,7 +2319,7 @@ export default function App() {
                       </div>
                     ) : (
                       <div className="items-list">
-                        {filteredDebts.map((d) => {
+                        {debtsToRender.map((d) => {
                           const ov = active.abonos[d.id];
                           const montoSugerido = calculations.suggested[d.id] || 0;
                           const monto = ov ? ov.monto : montoSugerido;
@@ -2410,6 +2421,27 @@ export default function App() {
                             </div>
                           );
                         })}
+
+                        {/* Botón para desplegar / contraer otras deudas en vista Ambos */}
+                        {filtroPersonaHome === "ambos" && filteredDebts.length > 1 && (
+                          <button
+                            type="button"
+                            className="toggle-debts-btn"
+                            onClick={() => setMostrarTodasDeudasHome(!mostrarTodasDeudasHome)}
+                          >
+                            {!mostrarTodasDeudasHome ? (
+                              <>
+                                <ChevronDown size={14} />
+                                <span>Ver o abonar a otras deudas ({filteredDebts.length - 1} más)</span>
+                              </>
+                            ) : (
+                              <>
+                                <ChevronUp size={14} />
+                                <span>Simplificar y mostrar solo la deuda asignada para pago</span>
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
                     )}
 
