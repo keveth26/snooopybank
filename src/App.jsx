@@ -2384,6 +2384,26 @@ export default function App() {
                   </div>
                 </div>
               </div>
+
+              {/* Botón y Barra para Cerrar Quincena al Final del Home */}
+              <div className="home-bottom-close-bar animate-fade-in">
+                <div className="hb-info">
+                  <span className="hb-tag">¿Terminaste los pagos del período?</span>
+                  <strong className="hb-title">Cierre de quincena y actualización de saldos</strong>
+                  <p className="hb-desc">
+                    Archiva los gastos en el historial, descuenta los abonos a las deudas y suma el ahorro a la alcancía.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="glass-btn-primary close-q-btn-bottom"
+                  onClick={cerrarQuincena}
+                >
+                  <Check size={18} />
+                  <span>Cerrar quincena</span>
+                  <ArrowRight size={18} />
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -4734,6 +4754,73 @@ body, html {
   .pill-controls .glass-select,
   .pill-controls .anio-input {
     width: 100%;
+  }
+}
+
+/* Barra inferior de cerrar quincena */
+.home-bottom-close-bar {
+  margin-top: 24px;
+  border-top: 1px dashed rgba(203, 213, 225, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(240, 253, 244, 0.7) 0%, rgba(255, 255, 255, 0.9) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 8px 24px -6px rgba(16, 185, 129, 0.08);
+}
+.hb-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 580px;
+}
+.hb-tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--emerald-dark);
+}
+.hb-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.hb-desc {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.35;
+}
+.close-q-btn-bottom {
+  padding: 12px 22px;
+  font-size: 14.5px;
+  border-radius: 999px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px -4px rgba(16, 185, 129, 0.35);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.close-q-btn-bottom:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -4px rgba(16, 185, 129, 0.45);
+}
+@media (max-width: 640px) {
+  .home-bottom-close-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px 12px;
+    gap: 12px;
+  }
+  .close-q-btn-bottom {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 16px;
   }
 }
 
