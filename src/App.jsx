@@ -880,15 +880,24 @@ export default function App() {
   }, [filtroPersonaHome, calculations?.focalDebt, filteredDebts]);
 
   const debtsToRender = useMemo(() => {
-    if (filtroPersonaHome !== "ambos") {
-      return filteredDebts;
+    const allPendingDebts = calculations?.orderedDebts || [];
+    if (allPendingDebts.length === 0) return [];
+
+    // Si está colapsado (vista por defecto): solo mostrar la deuda foco asignada para pago
+    if (!mostrarTodasDeudasHome) {
+      if (filtroPersonaHome === "ambos") {
+        return focalDebtView ? [focalDebtView] : [allPendingDebts[0]];
+      }
+      // En vista individual (David o Eveth):
+      // Mostrar la deuda prioritaria con pago asignado para esta persona
+      const focalForPerson = filteredDebts[0] || focalDebtView || allPendingDebts[0];
+      return focalForPerson ? [focalForPerson] : [];
     }
-    // En vista "Ambos" (todos): esconder las demás y dejar visible solo la asignada para pago
-    if (!mostrarTodasDeudasHome && focalDebtView) {
-      return [focalDebtView];
-    }
-    return filteredDebts;
-  }, [filtroPersonaHome, filteredDebts, mostrarTodasDeudasHome, focalDebtView]);
+
+    // Si está expandido (mostrarTodasDeudasHome === true):
+    // Desplegar todas las deudas pendientes en ambas vistas
+    return allPendingDebts;
+  }, [filtroPersonaHome, filteredDebts, calculations?.orderedDebts, mostrarTodasDeudasHome, focalDebtView]);
 
   const filteredExtras = useMemo(() => {
     if (!active?.ingresosExtras) return [];
@@ -2294,23 +2303,13 @@ export default function App() {
 
                     <div className="section-title-flex">
                       <div>
-                        <h3>Abono a Deudas ({filteredDebts.length})</h3>
+                        <h3>Abono a Deudas</h3>
                         <span className="prio-tag">Estrategia Bola de Nieve</span>
                       </div>
-                      <button
-                        type="button"
-                        className="toggle-debts-btn"
-                        onClick={() => setActiveTab("deudas")}
-                        title="Ir a gestionar y ver todas las deudas"
-                      >
-                        <CreditCard size={13} />
-                        <span>Ver y abonar deudas</span>
-                        <ArrowRight size={13} />
-                      </button>
                     </div>
 
                     {/* Vista de Abonos a Deudas según filtroPersonaHome */}
-                    {filteredDebts.length === 0 ? (
+                    {debtsToRender.length === 0 ? (
                       <div className="empty-filter-debts-box">
                         <p>No hay abonos a deudas asignados a <strong>{filtroPersonaHome === "david" ? "David" : "Eveth"}</strong> en esta quincena.</p>
                         <button type="button" className="modern-btn-pill-accent" onClick={() => setFiltroPersonaHome("ambos")}>
@@ -2336,6 +2335,7 @@ export default function App() {
                           // CUANDO SE SELECCIONA UNA SOLA PERSONA (EVETH O DAVID):
                           // Solo se muestra cuánto debe abonar esa persona directamente
                           if (filtroPersonaHome !== "ambos") {
+                            const isMyShare = myShare > 0;
                             return (
                               <div
                                 className={"debt-abono-card single-person-debt-card " + (pagado ? "is-paid" : "")}
@@ -2353,13 +2353,18 @@ export default function App() {
                                   <div className="single-debt-info">
                                     <span className={"concept-title " + (pagado ? "is-done" : "")}>
                                       <span className="concept-text">{d.concepto}</span>
+                                      {d.soloCuotaFija && <span className="tag-cuota-fija">Cuota Q2</span>}
                                       {isDue && <span className="badge-tag-due animate-pulse">⏰ Vence esta quincena</span>}
                                     </span>
                                   </div>
 
-                                  <div className="single-debt-amount-pill">
-                                    <span className="single-debt-label">Debes abonar:</span>
-                                    <strong className="single-debt-value">{fmt(myShare)}</strong>
+                                  <div className={"single-debt-amount-pill " + (!isMyShare ? "pending-balance-pill" : "")}>
+                                    <span className="single-debt-label">
+                                      {isMyShare ? "Debes abonar:" : "Saldo pendiente:"}
+                                    </span>
+                                    <strong className="single-debt-value">
+                                      {fmt(isMyShare ? myShare : d.saldo)}
+                                    </strong>
                                   </div>
                                 </div>
                               </div>
@@ -2422,8 +2427,8 @@ export default function App() {
                           );
                         })}
 
-                        {/* Botón para desplegar / contraer otras deudas en vista Ambos */}
-                        {filtroPersonaHome === "ambos" && filteredDebts.length > 1 && (
+                        {/* Botón para desplegar / contraer otras deudas en vista Ambos, Eveth o David */}
+                        {calculations?.orderedDebts?.length > 1 && (
                           <button
                             type="button"
                             className="toggle-debts-btn"
@@ -2432,7 +2437,7 @@ export default function App() {
                             {!mostrarTodasDeudasHome ? (
                               <>
                                 <ChevronDown size={14} />
-                                <span>Ver o abonar a otras deudas ({filteredDebts.length - 1} más)</span>
+                                <span>Ver y abonar deudas ({calculations.orderedDebts.length - 1} más)</span>
                               </>
                             ) : (
                               <>
@@ -4538,6 +4543,17 @@ body, html {
 .libre-pill-border .single-debt-label,
 .libre-pill-border .single-debt-value {
   color: #6d28d9;
+}
+.pending-balance-pill {
+  background: rgba(100, 116, 139, 0.1);
+  border-color: rgba(100, 116, 139, 0.25);
+}
+.pending-balance-pill .single-debt-label {
+  color: var(--text-muted);
+}
+.pending-balance-pill .single-debt-value {
+  color: var(--text-main);
+  font-size: 14.5px;
 }
 @media (max-width: 640px) {
   .single-person-debt-card {
