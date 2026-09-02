@@ -1310,10 +1310,138 @@ export default function App() {
       <div className="ambient-blob blob-blue" />
       <div className="ambient-blob blob-amber" />
 
+      {/* Drawer lateral móvil que sale de la izquierda en celulares */}
+      {menuOpen && (
+        <div
+          className="mobile-drawer-backdrop animate-fade-in"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+      <aside className={"mobile-sidebar-drawer " + (menuOpen ? "open" : "")}>
+        <div className="drawer-header">
+          <div className="drawer-brand">
+            <img src="/snoopy-logo.jpg" alt="Snoopy Bank" className="drawer-logo" />
+            <div className="drawer-brand-text">
+              <span className="drawer-badge">David &amp; Eveth</span>
+              <h3 className="drawer-title">Snoopy Bank</h3>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="drawer-close-btn"
+            onClick={() => setMenuOpen(false)}
+            aria-label="Cerrar menú"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <nav className="drawer-nav-list">
+          <button
+            type="button"
+            className={"drawer-nav-link " + (activeTab === "home" ? "active" : "")}
+            onClick={() => {
+              setActiveTab("home");
+              setMenuOpen(false);
+            }}
+          >
+            <div className="drawer-icon-box icon-home"><Home size={18} /></div>
+            <div className="drawer-link-texts">
+              <strong className="drawer-link-title">Quincena Activa</strong>
+              <span className="drawer-link-desc">Planificador en curso</span>
+            </div>
+            {activeTab === "home" && <span className="drawer-active-pill">Actual</span>}
+          </button>
+
+          <button
+            type="button"
+            className={"drawer-nav-link " + (activeTab === "programados" ? "active" : "")}
+            onClick={() => {
+              setActiveTab("programados");
+              setMenuOpen(false);
+            }}
+          >
+            <div className="drawer-icon-box icon-calendar"><Calendar size={18} /></div>
+            <div className="drawer-link-texts">
+              <strong className="drawer-link-title">Gastos Futuros</strong>
+              <span className="drawer-link-desc">Compromisos con fecha</span>
+            </div>
+            {scheduledExpenses.length > 0 && (
+              <span className="drawer-count">{scheduledExpenses.length}</span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            className={"drawer-nav-link " + (activeTab === "deudas" ? "active" : "")}
+            onClick={() => {
+              setActiveTab("deudas");
+              setMenuOpen(false);
+            }}
+          >
+            <div className="drawer-icon-box icon-debt"><CreditCard size={18} /></div>
+            <div className="drawer-link-texts">
+              <strong className="drawer-link-title">Deudas</strong>
+              <span className="drawer-link-desc">Amortizaciones y cuotas</span>
+            </div>
+            <span className="drawer-badge-pill debt-pill">{fmt(calculations.totalDeuda)}</span>
+          </button>
+
+          <button
+            type="button"
+            className={"drawer-nav-link " + (activeTab === "ahorros" ? "active" : "")}
+            onClick={() => {
+              setActiveTab("ahorros");
+              setMenuOpen(false);
+            }}
+          >
+            <div className="drawer-icon-box icon-save"><PiggyBank size={18} /></div>
+            <div className="drawer-link-texts">
+              <strong className="drawer-link-title">Ahorros</strong>
+              <span className="drawer-link-desc">Alcancía y metas</span>
+            </div>
+            <span className="drawer-badge-pill save-pill">{fmt(savings.balanceTotal)}</span>
+          </button>
+
+          <button
+            type="button"
+            className={"drawer-nav-link " + (activeTab === "historico" ? "active" : "")}
+            onClick={() => {
+              setActiveTab("historico");
+              setMenuOpen(false);
+            }}
+          >
+            <div className="drawer-icon-box icon-history"><History size={18} /></div>
+            <div className="drawer-link-texts">
+              <strong className="drawer-link-title">Histórico</strong>
+              <span className="drawer-link-desc">Quincenas archivadas</span>
+            </div>
+            {history.length > 0 && (
+              <span className="drawer-count">{history.length}</span>
+            )}
+          </button>
+        </nav>
+
+        <div className="drawer-footer">
+          <p>Snoopy Bank • Finanzas David &amp; Eveth</p>
+        </div>
+      </aside>
+
       <div className="glass-container">
-        {/* Encabezado con Menú Hamburguesa Compacto */}
+        {/* Encabezado: Barra compacta en móvil y navbar completo en computador */}
         <header className="glass-header">
           <div className="header-bar">
+            {/* Botón hamburguesa: visible SOLO en celular (<768px) para abrir menú de la izquierda */}
+            <button
+              type="button"
+              className="mobile-hamburger-btn"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Abrir menú de navegación"
+            >
+              <Menu size={20} />
+              <span className="mobile-menu-label">Menú</span>
+            </button>
+
             <div
               className="header-brand"
               onClick={() => setActiveTab("home")}
@@ -1336,165 +1464,71 @@ export default function App() {
               </div>
             </div>
 
-            {/* Botón Hamburguesa Moderno */}
-            <div className="hamburger-container">
-              <button
-                type="button"
-                className={"hamburger-trigger " + (menuOpen ? "active" : "")}
-                onClick={() => setMenuOpen(!menuOpen)}
-                aria-label="Abrir menú de navegación"
-              >
-                <div className="hamburger-active-pill">
-                  {activeTab === "home" && <Home size={15} />}
-                  {activeTab === "programados" && <Calendar size={15} />}
-                  {activeTab === "deudas" && <CreditCard size={15} />}
-                  {activeTab === "ahorros" && <PiggyBank size={15} />}
-                  {activeTab === "historico" && <History size={15} />}
-                  <span className="pill-tab-title">
-                    {activeTab === "home"
-                      ? "Quincena"
-                      : activeTab === "programados"
-                      ? "Futuros"
-                      : activeTab === "deudas"
-                      ? "Deudas"
-                      : activeTab === "ahorros"
-                      ? "Ahorros"
-                      : "Histórico"}
-                  </span>
-                </div>
-
-                <div className="hamburger-icon-bubble">
-                  {menuOpen ? <X size={18} /> : <Menu size={18} />}
-                </div>
-              </button>
-
-              {/* Menú Desplegable / Drawer Flotante */}
-              {menuOpen && (
-                <>
-                  <div
-                    className="menu-backdrop animate-fade-in"
-                    onClick={() => setMenuOpen(false)}
-                  />
-                  <div className="hamburger-dropdown animate-fade-in">
-                    <div className="dropdown-header">
-                      <div className="dropdown-header-title">
-                        <Sparkles size={13} className="sparkle-icon" />
-                        <span>Secciones de la App</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="dropdown-close-btn"
-                        onClick={() => setMenuOpen(false)}
-                        aria-label="Cerrar menú"
-                      >
-                        <X size={15} />
-                      </button>
-                    </div>
-
-                    <div className="dropdown-items">
-                      <button
-                        type="button"
-                        className={"dropdown-item " + (activeTab === "home" ? "active" : "")}
-                        onClick={() => {
-                          setActiveTab("home");
-                          setMenuOpen(false);
-                        }}
-                      >
-                        <div className="dropdown-item-icon icon-home">
-                          <Home size={17} />
-                        </div>
-                        <div className="dropdown-item-content">
-                          <span className="dropdown-item-title">Quincena Activa</span>
-                          <span className="dropdown-item-desc">Planificador de pagos en curso</span>
-                        </div>
-                        <span className="dropdown-tag-active">En curso</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className={"dropdown-item " + (activeTab === "programados" ? "active" : "")}
-                        onClick={() => {
-                          setActiveTab("programados");
-                          setMenuOpen(false);
-                        }}
-                      >
-                        <div className="dropdown-item-icon icon-calendar">
-                          <Calendar size={17} />
-                        </div>
-                        <div className="dropdown-item-content">
-                          <span className="dropdown-item-title">Gastos Futuros</span>
-                          <span className="dropdown-item-desc">Compromisos con fecha límite</span>
-                        </div>
-                        {scheduledExpenses.length > 0 && (
-                          <span className="dropdown-badge">{scheduledExpenses.length}</span>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        className={"dropdown-item " + (activeTab === "deudas" ? "active" : "")}
-                        onClick={() => {
-                          setActiveTab("deudas");
-                          setMenuOpen(false);
-                        }}
-                      >
-                        <div className="dropdown-item-icon icon-debt">
-                          <CreditCard size={17} />
-                        </div>
-                        <div className="dropdown-item-content">
-                          <span className="dropdown-item-title">Deudas</span>
-                          <span className="dropdown-item-desc">Control, cuotas y amortizaciones</span>
-                        </div>
-                        <span className="dropdown-pill-amount debt-pill">
-                          {fmt(calculations.totalDeuda)}
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className={"dropdown-item " + (activeTab === "ahorros" ? "active" : "")}
-                        onClick={() => {
-                          setActiveTab("ahorros");
-                          setMenuOpen(false);
-                        }}
-                      >
-                        <div className="dropdown-item-icon icon-save">
-                          <PiggyBank size={17} />
-                        </div>
-                        <div className="dropdown-item-content">
-                          <span className="dropdown-item-title">Ahorros</span>
-                          <span className="dropdown-item-desc">Alcancía familiar y metas</span>
-                        </div>
-                        <span className="dropdown-pill-amount save-pill">
-                          {fmt(savings.balanceTotal)}
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className={"dropdown-item " + (activeTab === "historico" ? "active" : "")}
-                        onClick={() => {
-                          setActiveTab("historico");
-                          setMenuOpen(false);
-                        }}
-                      >
-                        <div className="dropdown-item-icon icon-history">
-                          <History size={17} />
-                        </div>
-                        <div className="dropdown-item-content">
-                          <span className="dropdown-item-title">Histórico</span>
-                          <span className="dropdown-item-desc">Quincenas archivadas y auditoría</span>
-                        </div>
-                        {history.length > 0 && (
-                          <span className="dropdown-badge">{history.length}</span>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
+            {/* En celular: indicador rápido de la pestaña activa */}
+            <div className="mobile-active-tag">
+              {activeTab === "home" && <span>🏠 Quincena</span>}
+              {activeTab === "programados" && <span>📅 Futuros</span>}
+              {activeTab === "deudas" && <span>💳 Deudas</span>}
+              {activeTab === "ahorros" && <span>🐷 Ahorros</span>}
+              {activeTab === "historico" && <span>📜 Histórico</span>}
             </div>
           </div>
+
+          {/* Menú de computador: SIEMPRE visible en computador (>768px) */}
+          <nav className="desktop-navbar">
+            <button
+              type="button"
+              className={"desktop-nav-item " + (activeTab === "home" ? "active" : "")}
+              onClick={() => setActiveTab("home")}
+            >
+              <Home size={16} />
+              <span>Quincena Activa</span>
+            </button>
+
+            <button
+              type="button"
+              className={"desktop-nav-item " + (activeTab === "programados" ? "active" : "")}
+              onClick={() => setActiveTab("programados")}
+            >
+              <Calendar size={16} />
+              <span>Gastos Futuros</span>
+              {scheduledExpenses.length > 0 && (
+                <span className="nav-count">{scheduledExpenses.length}</span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              className={"desktop-nav-item " + (activeTab === "deudas" ? "active" : "")}
+              onClick={() => setActiveTab("deudas")}
+            >
+              <CreditCard size={16} />
+              <span>Deudas</span>
+              <span className="nav-badge-pill">{fmt(calculations.totalDeuda)}</span>
+            </button>
+
+            <button
+              type="button"
+              className={"desktop-nav-item " + (activeTab === "ahorros" ? "active" : "")}
+              onClick={() => setActiveTab("ahorros")}
+            >
+              <PiggyBank size={16} />
+              <span>Ahorros</span>
+              <span className="nav-badge-pill savings-pill">{fmt(savings.balanceTotal)}</span>
+            </button>
+
+            <button
+              type="button"
+              className={"desktop-nav-item " + (activeTab === "historico" ? "active" : "")}
+              onClick={() => setActiveTab("historico")}
+            >
+              <History size={16} />
+              <span>Histórico</span>
+              {history.length > 0 && (
+                <span className="nav-count">{history.length}</span>
+              )}
+            </button>
+          </nav>
         </header>
 
         {/* ========================================================
@@ -1541,7 +1575,7 @@ export default function App() {
                 </div>
 
                 <button className="glass-btn-primary close-q-btn" onClick={cerrarQuincena}>
-                  <span>Cerrar quincena</span>
+                  <span>Cerrar {active.tipo === "Q1" ? "primera" : "segunda"} quincena de {MONTHS[active.mes]}</span>
                   <ArrowRight size={16} />
                 </button>
               </div>
@@ -2400,7 +2434,7 @@ export default function App() {
                   onClick={cerrarQuincena}
                 >
                   <Check size={18} />
-                  <span>Cerrar quincena</span>
+                  <span>Cerrar {active.tipo === "Q1" ? "primera" : "segunda"} quincena de {MONTHS[active.mes]}</span>
                   <ArrowRight size={18} />
                 </button>
               </div>
@@ -3184,105 +3218,78 @@ body, html {
   font-weight: 500;
 }
 
-/* Menú Hamburguesa Moderno */
-.hamburger-container {
-  position: relative;
-  z-index: 200;
-}
-.hamburger-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  background: #0f172a;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 6px 8px 6px 14px;
-  border-radius: 999px;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.2);
-  transition: all 0.2s ease;
-  font-family: 'Inter', sans-serif;
-}
-.hamburger-trigger:hover, .hamburger-trigger.active {
-  background: #1e293b;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.3);
-}
-.hamburger-active-pill {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #f8fafc;
-}
-.pill-tab-title {
-  letter-spacing: -0.01em;
-}
-.hamburger-icon-bubble {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s ease, background 0.2s ease;
-}
-.hamburger-trigger:hover .hamburger-icon-bubble {
-  background: rgba(255, 255, 255, 0.25);
-  transform: scale(1.05);
-}
-
-/* Backdrop y Drawer Desplegable */
-.menu-backdrop {
+/* Drawer lateral móvil que sale de la izquierda (Off-Canvas) */
+.mobile-drawer-backdrop {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.4);
+  background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  z-index: 210;
+  z-index: 9998;
 }
-.hamburger-dropdown {
-  position: absolute;
-  top: calc(100% + 12px);
-  right: 0;
-  width: 330px;
-  max-width: calc(100vw - 32px);
-  background: rgba(255, 255, 255, 0.96);
+.mobile-sidebar-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 300px;
+  max-width: 86vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
-  padding: 16px;
-  box-shadow: 0 24px 48px -8px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  z-index: 220;
+  z-index: 9999;
+  box-shadow: 8px 0 36px rgba(15, 23, 42, 0.22);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
 }
-.dropdown-header {
+.mobile-sidebar-drawer.open {
+  transform: translateX(0);
+}
+.drawer-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 12px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.85);
 }
-.dropdown-header-title {
+.drawer-brand {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
+  gap: 12px;
 }
-.dropdown-close-btn {
-  width: 28px;
-  height: 28px;
+.drawer-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+.drawer-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--emerald-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.drawer-title {
+  font-family: 'Fraunces', 'Outfit', serif;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-dark);
+}
+.drawer-close-btn {
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: none;
   background: rgba(241, 245, 249, 0.9);
@@ -3293,39 +3300,40 @@ body, html {
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.dropdown-close-btn:hover {
+.drawer-close-btn:hover {
   background: #e2e8f0;
   color: var(--text-dark);
 }
-.dropdown-items {
+.drawer-nav-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding: 16px 14px;
+  flex: 1;
 }
-.dropdown-item {
+.drawer-nav-link {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 14px;
+  padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid transparent;
   background: transparent;
   text-align: left;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.15s ease;
   width: 100%;
   font-family: 'Inter', sans-serif;
 }
-.dropdown-item:hover {
-  background: rgba(241, 245, 249, 0.9);
-  transform: translateX(2px);
+.drawer-nav-link:hover {
+  background: rgba(241, 245, 249, 0.85);
 }
-.dropdown-item.active {
+.drawer-nav-link.active {
   background: #0f172a;
   color: white;
-  box-shadow: 0 8px 18px -4px rgba(15, 23, 42, 0.3);
+  box-shadow: 0 6px 16px -2px rgba(15, 23, 42, 0.25);
 }
-.dropdown-item-icon {
+.drawer-icon-box {
   width: 36px;
   height: 36px;
   border-radius: 10px;
@@ -3333,45 +3341,50 @@ body, html {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: transform 0.15s ease;
-}
-.dropdown-item:hover .dropdown-item-icon {
-  transform: scale(1.05);
 }
 .icon-home { background: rgba(16, 185, 129, 0.15); color: var(--emerald-dark); }
 .icon-calendar { background: rgba(99, 102, 241, 0.15); color: #4f46e5; }
 .icon-debt { background: rgba(245, 158, 11, 0.15); color: var(--amber-dark); }
 .icon-save { background: rgba(59, 130, 246, 0.15); color: var(--blue-dark); }
 .icon-history { background: rgba(100, 116, 139, 0.15); color: #334155; }
-.dropdown-item.active .dropdown-item-icon {
+.drawer-nav-link.active .drawer-icon-box {
   background: rgba(255, 255, 255, 0.2);
   color: white;
 }
-.dropdown-item-content {
+.drawer-link-texts {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-width: 0;
 }
-.dropdown-item-title {
+.drawer-link-title {
   font-size: 14.5px;
   font-weight: 600;
   color: var(--text-dark);
 }
-.dropdown-item.active .dropdown-item-title {
+.drawer-nav-link.active .drawer-link-title {
   color: white;
 }
-.dropdown-item-desc {
+.drawer-link-desc {
   font-size: 11px;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.dropdown-item.active .dropdown-item-desc {
+.drawer-nav-link.active .drawer-link-desc {
   color: rgba(255, 255, 255, 0.7);
 }
-.dropdown-badge {
+.drawer-active-pill {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--emerald);
+  color: white;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.drawer-count {
   background: rgba(241, 245, 249, 0.9);
   color: var(--text-dark);
   padding: 2px 8px;
@@ -3379,87 +3392,164 @@ body, html {
   font-size: 11px;
   font-weight: 700;
 }
-.dropdown-item.active .dropdown-badge {
+.drawer-nav-link.active .drawer-count {
   background: rgba(255, 255, 255, 0.2);
   color: white;
 }
-.dropdown-pill-amount {
+.drawer-badge-pill {
   font-size: 11px;
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 999px;
 }
-.dropdown-pill-amount.debt-pill {
+.drawer-badge-pill.debt-pill {
   background: rgba(245, 158, 11, 0.15);
   color: var(--amber-dark);
 }
-.dropdown-pill-amount.save-pill {
+.drawer-badge-pill.save-pill {
   background: rgba(59, 130, 246, 0.15);
   color: var(--blue-dark);
 }
-.dropdown-item.active .dropdown-pill-amount {
+.drawer-nav-link.active .drawer-badge-pill {
   background: rgba(255, 255, 255, 0.25);
   color: white;
 }
-.dropdown-tag-active {
-  display: none;
-}
-.dropdown-item.active .dropdown-tag-active {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  background: var(--emerald);
-  color: white;
-  padding: 2px 6px;
-  border-radius: 4px;
+.drawer-footer {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(226, 232, 240, 0.85);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  text-align: center;
 }
 
-/* Responsividad Header */
-@media (max-width: 640px) {
+/* Desktop Navbar: siempre visible en computador */
+.desktop-navbar {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.desktop-nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  padding: 10px 18px;
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  font-family: 'Inter', sans-serif;
+}
+.desktop-nav-item:hover {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-dark);
+  transform: translateY(-1px);
+}
+.desktop-nav-item.active {
+  background: #0f172a;
+  color: white;
+  border-color: #0f172a;
+  font-weight: 600;
+  box-shadow: 0 8px 18px -4px rgba(15, 23, 42, 0.25);
+}
+.desktop-nav-item .nav-count {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+.desktop-nav-item .nav-badge-pill {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--amber-dark);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.desktop-nav-item.active .nav-badge-pill {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fde68a;
+}
+.desktop-nav-item.active .nav-badge-pill.savings-pill {
+  background: rgba(255, 255, 255, 0.2);
+  color: #bfdbfe;
+}
+
+/* Botón hamburguesa móvil */
+.mobile-hamburger-btn {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  background: #0f172a;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+  transition: all 0.2s ease;
+}
+.mobile-hamburger-btn:hover {
+  background: #1e293b;
+}
+.mobile-active-tag {
+  display: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--emerald-dark);
+  background: rgba(16, 185, 129, 0.12);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+/* Reglas Responsive: Ocultar desktop navbar en móvil y mostrar hamburguesa */
+@media (max-width: 768px) {
+  .desktop-navbar {
+    display: none !important;
+  }
+  .mobile-hamburger-btn {
+    display: inline-flex !important;
+  }
+  .mobile-active-tag {
+    display: inline-flex !important;
+  }
   .header-bar {
     padding: 8px 12px;
     border-radius: 18px;
     gap: 8px;
   }
   .header-snoopy-logo {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     border-radius: 12px;
   }
   .hero-title {
-    font-size: 19px;
+    font-size: 18px;
   }
   .hero-subtitle {
     display: none;
   }
-  .brand-badge {
-    padding: 1px 7px;
-    font-size: 10px;
+}
+@media (min-width: 769px) {
+  .mobile-sidebar-drawer, .mobile-drawer-backdrop {
+    display: none !important;
   }
-  .hamburger-trigger {
-    padding: 4px 6px 4px 10px;
-    gap: 7px;
+  .mobile-hamburger-btn {
+    display: none !important;
   }
-  .hamburger-active-pill {
-    font-size: 12.5px;
-  }
-  .hamburger-icon-bubble {
-    width: 28px;
-    height: 28px;
-  }
-  .hamburger-dropdown {
-    position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    max-width: 100%;
-    border-radius: 24px 24px 0 0;
-    padding: 20px 16px 36px;
-    max-height: 85vh;
-    overflow-y: auto;
+  .mobile-active-tag {
+    display: none !important;
   }
 }
 
