@@ -3,7 +3,7 @@ import {
   Check, Plus, Trash2, ArrowRight, Home, History, CreditCard,
   PiggyBank, Sparkles, AlertCircle, RefreshCw, X, Calendar,
   AlertTriangle, Clock, ChevronDown, ChevronUp, Layers, Coins,
-  User, Users
+  User, Users, Menu
 } from "lucide-react";
 import { loadKeyWithSync, saveKeyWithSync, fetchStateFromCloud } from "./api";
 
@@ -536,6 +536,7 @@ function loadLocal(key, fallback) {
 export default function App() {
   const [loaded, setLoaded] = useState(true);
   const [activeTab, setActiveTab] = useState("home");
+  const [menuOpen, setMenuOpen] = useState(false);
   const [debts, setDebts] = useState(() => {
     const d = loadLocal("finanzas:debts", DEFAULT_DEBTS);
     let initialDebts = (d || DEFAULT_DEBTS).map((debt) => {
@@ -1310,71 +1311,191 @@ export default function App() {
       <div className="ambient-blob blob-amber" />
 
       <div className="glass-container">
-        {/* Encabezado */}
+        {/* Encabezado con Menú Hamburguesa Compacto */}
         <header className="glass-header">
-          <div className="header-brand-hero">
-            <div className="header-logo-container">
-              <img
-                src="/snoopy-logo.jpg"
-                alt="Snoopy Bank Logo"
-                className="header-snoopy-logo"
-              />
-            </div>
-            <div className="header-headings">
-              <div className="brand-badge">
-                <Sparkles size={13} className="sparkle-icon" />
-                <span>David &amp; Eveth</span>
+          <div className="header-bar">
+            <div
+              className="header-brand"
+              onClick={() => setActiveTab("home")}
+              title="Ir a Quincena Activa"
+            >
+              <div className="header-logo-container">
+                <img
+                  src="/snoopy-logo.jpg"
+                  alt="Snoopy Bank Logo"
+                  className="header-snoopy-logo"
+                />
               </div>
-              <h1 className="hero-title">Snoopy Bank</h1>
-              <p className="hero-subtitle">
-                Gestor financiero familiar y planificador de pagos
-              </p>
+              <div className="header-headings">
+                <div className="brand-badge">
+                  <Sparkles size={11} className="sparkle-icon" />
+                  <span>David &amp; Eveth</span>
+                </div>
+                <h1 className="hero-title">Snoopy Bank</h1>
+                <p className="hero-subtitle">Gestor familiar y pagos</p>
+              </div>
+            </div>
+
+            {/* Botón Hamburguesa Moderno */}
+            <div className="hamburger-container">
+              <button
+                type="button"
+                className={"hamburger-trigger " + (menuOpen ? "active" : "")}
+                onClick={() => setMenuOpen(!menuOpen)}
+                aria-label="Abrir menú de navegación"
+              >
+                <div className="hamburger-active-pill">
+                  {activeTab === "home" && <Home size={15} />}
+                  {activeTab === "programados" && <Calendar size={15} />}
+                  {activeTab === "deudas" && <CreditCard size={15} />}
+                  {activeTab === "ahorros" && <PiggyBank size={15} />}
+                  {activeTab === "historico" && <History size={15} />}
+                  <span className="pill-tab-title">
+                    {activeTab === "home"
+                      ? "Quincena"
+                      : activeTab === "programados"
+                      ? "Futuros"
+                      : activeTab === "deudas"
+                      ? "Deudas"
+                      : activeTab === "ahorros"
+                      ? "Ahorros"
+                      : "Histórico"}
+                  </span>
+                </div>
+
+                <div className="hamburger-icon-bubble">
+                  {menuOpen ? <X size={18} /> : <Menu size={18} />}
+                </div>
+              </button>
+
+              {/* Menú Desplegable / Drawer Flotante */}
+              {menuOpen && (
+                <>
+                  <div
+                    className="menu-backdrop animate-fade-in"
+                    onClick={() => setMenuOpen(false)}
+                  />
+                  <div className="hamburger-dropdown animate-fade-in">
+                    <div className="dropdown-header">
+                      <div className="dropdown-header-title">
+                        <Sparkles size={13} className="sparkle-icon" />
+                        <span>Secciones de la App</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="dropdown-close-btn"
+                        onClick={() => setMenuOpen(false)}
+                        aria-label="Cerrar menú"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+
+                    <div className="dropdown-items">
+                      <button
+                        type="button"
+                        className={"dropdown-item " + (activeTab === "home" ? "active" : "")}
+                        onClick={() => {
+                          setActiveTab("home");
+                          setMenuOpen(false);
+                        }}
+                      >
+                        <div className="dropdown-item-icon icon-home">
+                          <Home size={17} />
+                        </div>
+                        <div className="dropdown-item-content">
+                          <span className="dropdown-item-title">Quincena Activa</span>
+                          <span className="dropdown-item-desc">Planificador de pagos en curso</span>
+                        </div>
+                        <span className="dropdown-tag-active">En curso</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={"dropdown-item " + (activeTab === "programados" ? "active" : "")}
+                        onClick={() => {
+                          setActiveTab("programados");
+                          setMenuOpen(false);
+                        }}
+                      >
+                        <div className="dropdown-item-icon icon-calendar">
+                          <Calendar size={17} />
+                        </div>
+                        <div className="dropdown-item-content">
+                          <span className="dropdown-item-title">Gastos Futuros</span>
+                          <span className="dropdown-item-desc">Compromisos con fecha límite</span>
+                        </div>
+                        {scheduledExpenses.length > 0 && (
+                          <span className="dropdown-badge">{scheduledExpenses.length}</span>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        className={"dropdown-item " + (activeTab === "deudas" ? "active" : "")}
+                        onClick={() => {
+                          setActiveTab("deudas");
+                          setMenuOpen(false);
+                        }}
+                      >
+                        <div className="dropdown-item-icon icon-debt">
+                          <CreditCard size={17} />
+                        </div>
+                        <div className="dropdown-item-content">
+                          <span className="dropdown-item-title">Deudas</span>
+                          <span className="dropdown-item-desc">Control, cuotas y amortizaciones</span>
+                        </div>
+                        <span className="dropdown-pill-amount debt-pill">
+                          {fmt(calculations.totalDeuda)}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={"dropdown-item " + (activeTab === "ahorros" ? "active" : "")}
+                        onClick={() => {
+                          setActiveTab("ahorros");
+                          setMenuOpen(false);
+                        }}
+                      >
+                        <div className="dropdown-item-icon icon-save">
+                          <PiggyBank size={17} />
+                        </div>
+                        <div className="dropdown-item-content">
+                          <span className="dropdown-item-title">Ahorros</span>
+                          <span className="dropdown-item-desc">Alcancía familiar y metas</span>
+                        </div>
+                        <span className="dropdown-pill-amount save-pill">
+                          {fmt(savings.balanceTotal)}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={"dropdown-item " + (activeTab === "historico" ? "active" : "")}
+                        onClick={() => {
+                          setActiveTab("historico");
+                          setMenuOpen(false);
+                        }}
+                      >
+                        <div className="dropdown-item-icon icon-history">
+                          <History size={17} />
+                        </div>
+                        <div className="dropdown-item-content">
+                          <span className="dropdown-item-title">Histórico</span>
+                          <span className="dropdown-item-desc">Quincenas archivadas y auditoría</span>
+                        </div>
+                        {history.length > 0 && (
+                          <span className="dropdown-badge">{history.length}</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </header>
-
-        {/* Barra de Navegación Líquida */}
-        <nav className="glass-nav">
-          <button
-            className={"nav-item " + (activeTab === "home" ? "active" : "")}
-            onClick={() => setActiveTab("home")}
-          >
-            <Home size={16} />
-            <span>Quincena Activa</span>
-          </button>
-          <button
-            className={"nav-item " + (activeTab === "programados" ? "active" : "")}
-            onClick={() => setActiveTab("programados")}
-          >
-            <Calendar size={16} />
-            <span>Gastos Futuros</span>
-            {scheduledExpenses.length > 0 && <span className="nav-count">{scheduledExpenses.length}</span>}
-          </button>
-          <button
-            className={"nav-item " + (activeTab === "deudas" ? "active" : "")}
-            onClick={() => setActiveTab("deudas")}
-          >
-            <CreditCard size={16} />
-            <span>Deudas</span>
-            <span className="nav-badge-pill">{fmt(calculations.totalDeuda)}</span>
-          </button>
-          <button
-            className={"nav-item " + (activeTab === "ahorros" ? "active" : "")}
-            onClick={() => setActiveTab("ahorros")}
-          >
-            <PiggyBank size={16} />
-            <span>Ahorros</span>
-            <span className="nav-badge-pill savings-pill">{fmt(savings.balanceTotal)}</span>
-          </button>
-          <button
-            className={"nav-item " + (activeTab === "historico" ? "active" : "")}
-            onClick={() => setActiveTab("historico")}
-          >
-            <History size={16} />
-            <span>Histórico</span>
-            {history.length > 0 && <span className="nav-count">{history.length}</span>}
-          </button>
-        </nav>
 
         {/* ========================================================
             TAB 1: HOME (QUINCENA ACTIVA)
@@ -1423,6 +1544,43 @@ export default function App() {
                   <span>Cerrar quincena</span>
                   <ArrowRight size={16} />
                 </button>
+              </div>
+
+              {/* ========================================================
+                  GRÁFICA DONUT DE DISTRIBUCIÓN (PRIMERO PARA REVISIÓN RÁPIDA)
+                  ======================================================== */}
+              <div className="chart-section glass-inner-panel chart-section-hero">
+                <div className="chart-header">
+                  <div>
+                    <div className="flex-align-center gap-6">
+                      <span className="badge-pulse-dot" />
+                      <h3>Distribución Económica Global</h3>
+                    </div>
+                    <p className="sub-hint">Fijos, abono a deudas, ahorro para la alcancía y dinero libre para ocio.</p>
+                  </div>
+                  <div className="scope-switcher">
+                    <button
+                      className={"glass-pill-sm " + (viewChartScope === "quincena" ? "active" : "")}
+                      onClick={() => setViewChartScope("quincena")}
+                    >
+                      Esta Quincena
+                    </button>
+                    <button
+                      className={"glass-pill-sm " + (viewChartScope === "mes" ? "active" : "")}
+                      onClick={() => setViewChartScope("mes")}
+                    >
+                      Proyección Mes
+                    </button>
+                  </div>
+                </div>
+
+                <EconomyDonutChart
+                  gastos={viewChartScope === "quincena" ? calculations.chartCurrent.gastos : calculations.chartMonth.gastos}
+                  deudas={viewChartScope === "quincena" ? calculations.chartCurrent.deudas : calculations.chartMonth.deudas}
+                  ahorros={viewChartScope === "quincena" ? calculations.chartCurrent.ahorros : calculations.chartMonth.ahorros}
+                  libre={viewChartScope === "quincena" ? calculations.chartCurrent.libre : calculations.chartMonth.libre}
+                  totalTitle={viewChartScope === "quincena" ? "Total quincena" : "Total mensual"}
+                />
               </div>
 
               {/* Selector de Modo de Vista Personal / Familiar en Home */}
@@ -1574,38 +1732,6 @@ export default function App() {
                     )}
                   </div>
                 </div>
-              </div>
-
-              {/* Gráfica Donut de 4 Segmentos */}
-              <div className="chart-section glass-inner-panel">
-                <div className="chart-header">
-                  <div>
-                    <h3>Distribución Económica Global</h3>
-                    <p className="sub-hint">Fijos, abono a deudas, ahorro para la alcancía y dinero libre para ocio.</p>
-                  </div>
-                  <div className="scope-switcher">
-                    <button
-                      className={"glass-pill-sm " + (viewChartScope === "quincena" ? "active" : "")}
-                      onClick={() => setViewChartScope("quincena")}
-                    >
-                      Esta Quincena
-                    </button>
-                    <button
-                      className={"glass-pill-sm " + (viewChartScope === "mes" ? "active" : "")}
-                      onClick={() => setViewChartScope("mes")}
-                    >
-                      Proyección Mes
-                    </button>
-                  </div>
-                </div>
-
-                <EconomyDonutChart
-                  gastos={viewChartScope === "quincena" ? calculations.chartCurrent.gastos : calculations.chartMonth.gastos}
-                  deudas={viewChartScope === "quincena" ? calculations.chartCurrent.deudas : calculations.chartMonth.deudas}
-                  ahorros={viewChartScope === "quincena" ? calculations.chartCurrent.ahorros : calculations.chartMonth.ahorros}
-                  libre={viewChartScope === "quincena" ? calculations.chartCurrent.libre : calculations.chartMonth.libre}
-                  totalTitle={viewChartScope === "quincena" ? "Total quincena" : "Total mensual"}
-                />
               </div>
 
               {/* Ingresos Extras Desplegable */}
@@ -2959,145 +3085,363 @@ body, html {
 }
 
 .glass-header {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
-.header-brand-hero {
+.header-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 20px;
-  text-align: left;
+  justify-content: space-between;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  padding: 10px 16px;
+  border-radius: 24px;
+  box-shadow: 0 8px 32px -6px rgba(15, 23, 42, 0.07);
 }
-@media (max-width: 640px) {
-  .header-brand-hero {
-    flex-direction: column;
-    text-align: center;
-    gap: 12px;
-  }
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: opacity 0.2s ease;
+  user-select: none;
+}
+.header-brand:hover {
+  opacity: 0.9;
 }
 .header-logo-container {
   flex-shrink: 0;
 }
 .header-snoopy-logo {
-  width: 96px;
-  height: 96px;
-  border-radius: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
   object-fit: cover;
   background: #ffffff;
-  border: 3px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
-  padding: 4px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+  padding: 2px;
   display: block;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.25s ease;
 }
 .header-snoopy-logo:hover {
   transform: scale(1.05) rotate(-2deg);
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
 }
 .header-headings {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
-@media (max-width: 640px) {
-  .header-headings {
-    align-items: center;
-  }
-}
 .brand-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  padding: 4px 11px;
+  gap: 5px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 2px 9px;
   border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--emerald-dark);
-  margin-bottom: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  margin-bottom: 2px;
 }
 .sparkle-icon { color: var(--emerald); }
 .hero-title {
   font-family: 'Fraunces', 'Outfit', serif;
-  font-size: 42px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text-dark);
-  margin: 2px 0 6px;
-  letter-spacing: -0.03em;
-  line-height: 1.08;
-}
-@media (max-width: 640px) {
-  .hero-title {
-    font-size: 34px;
-  }
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 .hero-subtitle {
-  font-size: 15px;
+  font-size: 12px;
   color: var(--text-muted);
-  max-width: 50ch;
-  margin: 0;
-  line-height: 1.4;
+  margin: 1px 0 0;
+  line-height: 1.2;
   font-weight: 500;
 }
 
-/* Nav */
-.glass-nav {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 28px;
-  flex-wrap: wrap;
+/* Menú Hamburguesa Moderno */
+.hamburger-container {
+  position: relative;
+  z-index: 200;
 }
-.nav-item {
+.hamburger-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  padding: 12px 22px;
-  border-radius: 999px;
-  color: var(--text-muted);
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
-  font-family: 'Inter', sans-serif;
-}
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--text-dark);
-  transform: translateY(-1px);
-}
-.nav-item.active {
+  gap: 10px;
   background: #0f172a;
   color: white;
-  border-color: #0f172a;
-  font-weight: 600;
-  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.25);
-}
-.nav-count {
-  background: rgba(255, 255, 255, 0.25);
-  padding: 1px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 6px 8px 6px 14px;
   border-radius: 999px;
-  font-size: 11px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.2);
+  transition: all 0.2s ease;
+  font-family: 'Inter', sans-serif;
 }
-.nav-badge-pill {
-  background: rgba(245, 158, 11, 0.15);
-  color: var(--amber-dark);
+.hamburger-trigger:hover, .hamburger-trigger.active {
+  background: #1e293b;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.3);
+}
+.hamburger-active-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+.pill-tab-title {
+  letter-spacing: -0.01em;
+}
+.hamburger-icon-bubble {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.hamburger-trigger:hover .hamburger-icon-bubble {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+/* Backdrop y Drawer Desplegable */
+.menu-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 210;
+}
+.hamburger-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 330px;
+  max-width: calc(100vw - 32px);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 24px 48px -8px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  z-index: 220;
+}
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+}
+.dropdown-header-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.dropdown-close-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(241, 245, 249, 0.9);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.dropdown-close-btn:hover {
+  background: #e2e8f0;
+  color: var(--text-dark);
+}
+.dropdown-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+}
+.dropdown-item:hover {
+  background: rgba(241, 245, 249, 0.9);
+  transform: translateX(2px);
+}
+.dropdown-item.active {
+  background: #0f172a;
+  color: white;
+  box-shadow: 0 8px 18px -4px rgba(15, 23, 42, 0.3);
+}
+.dropdown-item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.dropdown-item:hover .dropdown-item-icon {
+  transform: scale(1.05);
+}
+.icon-home { background: rgba(16, 185, 129, 0.15); color: var(--emerald-dark); }
+.icon-calendar { background: rgba(99, 102, 241, 0.15); color: #4f46e5; }
+.icon-debt { background: rgba(245, 158, 11, 0.15); color: var(--amber-dark); }
+.icon-save { background: rgba(59, 130, 246, 0.15); color: var(--blue-dark); }
+.icon-history { background: rgba(100, 116, 139, 0.15); color: #334155; }
+.dropdown-item.active .dropdown-item-icon {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+.dropdown-item-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.dropdown-item-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+.dropdown-item.active .dropdown-item-title {
+  color: white;
+}
+.dropdown-item-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dropdown-item.active .dropdown-item-desc {
+  color: rgba(255, 255, 255, 0.7);
+}
+.dropdown-badge {
+  background: rgba(241, 245, 249, 0.9);
+  color: var(--text-dark);
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
 }
-.nav-item.active .nav-badge-pill { background: rgba(255, 255, 255, 0.2); color: #fde68a; }
-.nav-badge-pill.savings-pill { background: rgba(59, 130, 246, 0.15); color: var(--blue-dark); }
-.nav-item.active .nav-badge-pill.savings-pill { background: rgba(255, 255, 255, 0.2); color: #bfdbfe; }
+.dropdown-item.active .dropdown-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+.dropdown-pill-amount {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.dropdown-pill-amount.debt-pill {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--amber-dark);
+}
+.dropdown-pill-amount.save-pill {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--blue-dark);
+}
+.dropdown-item.active .dropdown-pill-amount {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+.dropdown-tag-active {
+  display: none;
+}
+.dropdown-item.active .dropdown-tag-active {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--emerald);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Responsividad Header */
+@media (max-width: 640px) {
+  .header-bar {
+    padding: 8px 12px;
+    border-radius: 18px;
+    gap: 8px;
+  }
+  .header-snoopy-logo {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+  .hero-title {
+    font-size: 19px;
+  }
+  .hero-subtitle {
+    display: none;
+  }
+  .brand-badge {
+    padding: 1px 7px;
+    font-size: 10px;
+  }
+  .hamburger-trigger {
+    padding: 4px 6px 4px 10px;
+    gap: 7px;
+  }
+  .hamburger-active-pill {
+    font-size: 12.5px;
+  }
+  .hamburger-icon-bubble {
+    width: 28px;
+    height: 28px;
+  }
+  .hamburger-dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 24px 24px 0 0;
+    padding: 20px 16px 36px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+}
 
 /* Glass Card */
 .glass-card {
@@ -4269,9 +4613,129 @@ body, html {
   cursor: pointer;
 }
 .reset-ghost-btn:hover { color: #ef4444; border-color: #ef4444; }
-.confirm-reset-box { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 12px; font-size: 13px; }
-.glass-btn-danger { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-.glass-btn-cancel { display: inline-flex; align-items: center; gap: 4px; background: transparent; border: 1px solid rgba(203, 213, 225, 0.8); padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+/* Gráfica Hero y Pulso */
+.chart-section-hero {
+  border: 1.5px solid rgba(16, 185, 129, 0.35);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(240, 253, 244, 0.65) 100%);
+  box-shadow: 0 10px 30px -8px rgba(16, 185, 129, 0.1);
+  margin-bottom: 20px;
+}
+.badge-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--emerald);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+  display: inline-block;
+}
+
+/* Mejoras Responsive Globales */
+@media (max-width: 768px) {
+  .glass-root {
+    padding: 12px 10px 70px;
+  }
+  .glass-card {
+    padding: 16px 12px;
+    border-radius: 18px;
+    margin-bottom: 16px;
+  }
+  .glass-inner-panel {
+    padding: 14px 10px;
+    border-radius: 14px;
+  }
+  .card-topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .q-period-selector h2 {
+    font-size: 20px;
+  }
+  .pill-controls {
+    gap: 6px;
+  }
+  .glass-pill {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  .close-q-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .scope-switcher {
+    width: 100%;
+  }
+  .scope-switcher button {
+    flex: 1;
+    text-align: center;
+    padding: 6px 10px;
+  }
+  .donut-wrap {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .donut-legend {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .hpf-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .hpf-segmented {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .hpf-btn {
+    padding: 8px 4px;
+    font-size: 12px;
+    justify-content: center;
+  }
+  .hpf-badge {
+    display: none;
+  }
+  .b-amount {
+    font-size: 24px;
+  }
+  .b-header strong {
+    font-size: 18px;
+  }
+  .b-footer {
+    gap: 8px;
+    font-size: 12px;
+  }
+  .gasto-row {
+    padding: 8px 4px;
+    gap: 6px;
+  }
+  .two-columns-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .donut-legend {
+    grid-template-columns: 1fr;
+  }
+  .pill-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .pill-controls .glass-select,
+  .pill-controls .anio-input {
+    width: 100%;
+  }
+}
 
 .animate-fade-in { animation: fadeIn 0.25s ease-out forwards; }
 @keyframes fadeIn {
