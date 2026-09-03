@@ -2022,22 +2022,58 @@ export default function App() {
 
                 <div className="extra-incomes-list">
                   {filteredExtras.length === 0 && !showExtraForm && (
-                    <p className="empty-hint">
-                      No hay ingresos extras registrados {filtroPersonaHome !== "ambos" ? `para ${filtroPersonaHome === "david" ? "David" : "Eveth"}` : "en esta quincena"}.
-                    </p>
+                    <div className="empty-extras-placeholder">
+                      <Sparkles size={16} className="empty-extras-icon" />
+                      <p className="empty-hint">
+                        No hay ingresos extras registrados {filtroPersonaHome !== "ambos" ? `para ${filtroPersonaHome === "david" ? "David" : "Eveth"}` : "en esta quincena"}.
+                      </p>
+                    </div>
                   )}
 
                   {filteredExtras.map((e) => (
-                    <div className="extra-item-row" key={e.id}>
-                      <span className="extra-tag-person">{e.persona === "eveth" ? "Eveth" : "David"}</span>
-                      <span className="extra-concept">{e.concepto}</span>
-                      <span className={"extra-dest-badge " + (e.destino === "deudas" ? "dest-debt" : "dest-save")}>
-                        {e.destino === "deudas" ? "Pagar deudas" : "Ahorro"}
-                      </span>
-                      <strong className="extra-amount">+{fmt(e.monto)}</strong>
-                      <button className="icon-btn-del" onClick={() => removeExtraIncome(e.id)} title="Eliminar ingreso extra">
-                        <Trash2 size={14} />
-                      </button>
+                    <div className={"extra-item-card animate-fade-in " + (e.persona === "eveth" ? "extra-card-eveth" : "extra-card-david")} key={e.id}>
+                      <div className="extra-left-content">
+                        <div className={"extra-avatar-icon " + (e.persona === "eveth" ? "avatar-eveth" : "avatar-david")}>
+                          {e.persona === "eveth" ? "E" : "D"}
+                        </div>
+                        <div className="extra-info-col">
+                          <span className="extra-concept-title">{e.concepto}</span>
+                          <div className="extra-badges-row">
+                            <span className={"extra-person-pill " + (e.persona === "eveth" ? "pill-eveth" : "pill-david")}>
+                              {e.persona === "eveth" ? "Eveth" : "David"}
+                            </span>
+                            <span className={"extra-dest-badge " + (e.destino === "deudas" ? "dest-debt" : "dest-save")}>
+                              {e.destino === "deudas" ? (
+                                <>
+                                  <CreditCard size={11} />
+                                  <span>Pagar deudas</span>
+                                </>
+                              ) : (
+                                <>
+                                  <PiggyBank size={11} />
+                                  <span>Ahorro</span>
+                                </>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="extra-right-content">
+                        <div className="extra-amount-wrap">
+                          <span className="extra-amount-label">Ingreso extra</span>
+                          <strong className="extra-amount-value">+{fmt(e.monto)}</strong>
+                        </div>
+                        <button
+                          type="button"
+                          className="extra-delete-btn"
+                          onClick={() => removeExtraIncome(e.id)}
+                          title="Eliminar ingreso extra"
+                          aria-label="Eliminar ingreso"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   ))}
 
@@ -4392,6 +4428,218 @@ body, html {
   color: white;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+}
+
+/* ========================================================
+   ESTILOS DE ELEMENTO INGRESO EXTRA (LISTA Y TARJETAS)
+   ======================================================== */
+.extra-incomes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.empty-extras-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px dashed rgba(203, 213, 225, 0.7);
+  border-radius: 14px;
+}
+.empty-extras-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+.empty-extras-placeholder .empty-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.extra-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 16px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px -3px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.extra-item-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 4px 0 0 4px;
+}
+.extra-card-eveth::before {
+  background: linear-gradient(180deg, #ec4899 0%, #be185d 100%);
+}
+.extra-card-david::before {
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+}
+.extra-item-card:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 22px -4px rgba(15, 23, 42, 0.09);
+  background: rgba(255, 255, 255, 0.96);
+}
+.extra-left-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.extra-avatar-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+.avatar-eveth {
+  background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+  color: #be185d;
+  border: 1px solid rgba(244, 114, 182, 0.4);
+}
+.avatar-david {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  color: #047857;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+}
+.extra-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.extra-concept-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-dark);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.extra-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.extra-person-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+.pill-eveth {
+  background: rgba(244, 114, 182, 0.15);
+  color: #9d174d;
+}
+.pill-david {
+  background: rgba(16, 185, 129, 0.15);
+  color: #065f46;
+}
+.extra-dest-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.01em;
+}
+.extra-dest-badge.dest-debt {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.extra-dest-badge.dest-save {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+.extra-right-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.extra-amount-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+.extra-amount-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.extra-amount-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #059669;
+  letter-spacing: -0.02em;
+}
+.extra-delete-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.extra-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  transform: scale(1.05);
+}
+@media (max-width: 600px) {
+  .extra-item-card {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .extra-concept-title {
+    font-size: 13.5px;
+  }
+  .extra-amount-value {
+    font-size: 14.5px;
+  }
+  .extra-avatar-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+    border-radius: 8px;
+  }
 }
 
 /* Formulario Desplegable de Ingresos Extras */
