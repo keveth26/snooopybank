@@ -5,7 +5,13 @@ import {
   AlertTriangle, Clock, ChevronDown, ChevronUp, Layers, Coins,
   User, Users, Menu
 } from "lucide-react";
-import { loadKeyWithSync, saveKeyWithSync, fetchStateFromCloud } from "./api";
+import {
+  loadKeyWithSync,
+  saveKeyWithSync,
+  fetchStateFromCloud,
+  subscribeSyncStatus,
+  saveBatchWithSync,
+} from "./api";
 
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", {
@@ -549,7 +555,8 @@ function loadLocal(key, fallback) {
 }
 
 export default function App() {
-  const [loaded, setLoaded] = useState(true);
+  const [loaded, setLoaded] = useState(false);
+  const [syncStatus, setSyncStatus] = useState("local");
   const [activeTab, setActiveTab] = useState("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const [debts, setDebts] = useState(() => {
@@ -599,54 +606,95 @@ export default function App() {
 
   const toggleExpandHistory = (id) => setExpandedHistoryIds((prev) => ({ ...prev, [id]: !prev[id] }));
 
-  // Cargar estado inicial (LocalStorage con respaldo Cloudflare D1)
+  // Suscribirse a cambios en el estado de sincronización (synced, syncing, local, error)
   useEffect(() => {
-    (async () => {
-      const [d, t, sExp, a, h, s] = await Promise.all([
-        loadKeyWithSync("finanzas:debts", DEFAULT_DEBTS),
-        loadKeyWithSync("finanzas:templates", { Q1: TEMPLATE_Q1, Q2: TEMPLATE_Q2 }),
-        loadKeyWithSync("finanzas:scheduled", DEFAULT_SCHEDULED),
-        loadKeyWithSync("finanzas:active", null),
-        loadKeyWithSync("finanzas:history", []),
-        loadKeyWithSync("finanzas:savings", DEFAULT_SAVINGS),
-      ]);
-
-      let initialDebts = (d || DEFAULT_DEBTS).map((debt) => {
-        const { asignado, ...rest } = debt;
-        return rest;
-      });
-      if (!initialDebts.some((debt) => debt.id === "carro_credito" || debt.concepto?.toLowerCase().includes("carro"))) {
-        initialDebts.push(DEFAULT_DEBTS.find((debt) => debt.id === "carro_credito"));
-      }
-
-      setDebts(initialDebts);
-      setTemplates(t || { Q1: TEMPLATE_Q1, Q2: TEMPLATE_Q2 });
-      const currentSched = sExp || DEFAULT_SCHEDULED;
-      setScheduledExpenses(currentSched);
-
-      if (a) {
-        setActive(sanitizeActive(a));
-      } else {
-        const now = new Date();
-        setActive(buildActiveFromTemplate("Q1", t?.Q1 || TEMPLATE_Q1, now.getMonth(), now.getFullYear(), currentSched));
-      }
-      setHistory(h || []);
-      setSavings(s || DEFAULT_SAVINGS);
-      setLoaded(true);
-
-      // Intento silencioso de sincronizar con D1 si hay nube
-      try {
-        const cloudData = await fetchStateFromCloud();
-        if (cloudData && cloudData["finanzas:debts"]) {
-          setDebts(cloudData["finanzas:debts"]);
-        }
-      } catch (e) {
-        // Modo local
-      }
-    })();
+    const unsubscribe = subscribeSyncStatus(setSyncStatus);
+    return unsubscribe;
   }, []);
 
-  // Sincronización híbrida automática
+  // Cargar estado inicial con respaldo bidireccional en Cloudflare D1
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      // 1. Cargar localmente primero (renderizado en 0ms sin latencia)
+      const localDebts = loadLocal("finanzas:debts", DEFAULT_DEBTS);
+      const localTemplates = loadLocal("finanzas:templates", { Q1: TEMPLATE_Q1, Q2: TEMPLATE_Q2 });
+      const localScheduled = loadLocal("finanzas:scheduled", DEFAULT_SCHEDULED);
+      const localActive = loadLocal("finanzas:active", null);
+      const localHistory = loadLocal("finanzas:history", []);
+      const localSavings = loadLocal("finanzas:savings", DEFAULT_SAVINGS);
+
+      // 2. Consultar base de datos Cloudflare D1 en la nube
+      let cloudData = null;
+      try {
+        cloudData = await fetchStateFromCloud();
+      } catch (e) {
+        console.warn("Modo local activo:", e);
+      }
+
+      if (!isMounted) return;
+
+      if (cloudData && Object.keys(cloudData).length > 0) {
+        // La nube contiene datos existentes: actualizamos todo el estado
+        if (cloudData["finanzas:debts"]) {
+          let debtsFromCloud = cloudData["finanzas:debts"].map((debt) => {
+            const { asignado, ...rest } = debt;
+            return rest;
+          });
+          if (!debtsFromCloud.some((d) => d.id === "carro_credito" || d.concepto?.toLowerCase().includes("carro"))) {
+            debtsFromCloud.push(DEFAULT_DEBTS.find((d) => d.id === "carro_credito"));
+          }
+          setDebts(debtsFromCloud);
+          window.localStorage.setItem("finanzas:debts", JSON.stringify(debtsFromCloud));
+        }
+
+        if (cloudData["finanzas:templates"]) {
+          setTemplates(cloudData["finanzas:templates"]);
+          window.localStorage.setItem("finanzas:templates", JSON.stringify(cloudData["finanzas:templates"]));
+        }
+
+        if (cloudData["finanzas:scheduled"]) {
+          setScheduledExpenses(cloudData["finanzas:scheduled"]);
+          window.localStorage.setItem("finanzas:scheduled", JSON.stringify(cloudData["finanzas:scheduled"]));
+        }
+
+        if (cloudData["finanzas:active"]) {
+          const sanitized = sanitizeActive(cloudData["finanzas:active"]);
+          setActive(sanitized);
+          window.localStorage.setItem("finanzas:active", JSON.stringify(sanitized));
+        }
+
+        if (cloudData["finanzas:history"]) {
+          setHistory(cloudData["finanzas:history"]);
+          window.localStorage.setItem("finanzas:history", JSON.stringify(cloudData["finanzas:history"]));
+        }
+
+        if (cloudData["finanzas:savings"]) {
+          setSavings(cloudData["finanzas:savings"]);
+          window.localStorage.setItem("finanzas:savings", JSON.stringify(cloudData["finanzas:savings"]));
+        }
+      } else if (cloudData !== null) {
+        // D1 está activo pero vacío (primer despliegue). Subimos los datos base a la nube.
+        saveBatchWithSync({
+          "finanzas:debts": localDebts,
+          "finanzas:templates": localTemplates,
+          "finanzas:scheduled": localScheduled,
+          "finanzas:active": localActive || active,
+          "finanzas:history": localHistory,
+          "finanzas:savings": localSavings,
+        });
+      }
+
+      // Marcamos como cargado para habilitar la persistencia automática de cambios futuros
+      setLoaded(true);
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Sincronización híbrida automática: solo activa tras completar la comprobación inicial
   useEffect(() => { if (loaded) saveKeyWithSync("finanzas:debts", debts); }, [debts, loaded]);
   useEffect(() => { if (loaded) saveKeyWithSync("finanzas:templates", templates); }, [templates, loaded]);
   useEffect(() => { if (loaded) saveKeyWithSync("finanzas:scheduled", scheduledExpenses); }, [scheduledExpenses, loaded]);
@@ -1623,6 +1671,34 @@ export default function App() {
                 <h1 className="hero-title">Snoopy Bank</h1>
                 <p className="hero-subtitle">Gestor familiar y pagos</p>
               </div>
+            </div>
+
+            {/* Indicador de estado de sincronización con Cloudflare D1 */}
+            <div className="header-sync-status">
+              {syncStatus === "synced" && (
+                <span className="sync-badge synced" title="Conectado y sincronizado con Cloudflare D1">
+                  <span className="sync-dot synced"></span>
+                  <span className="sync-text">D1 Nube</span>
+                </span>
+              )}
+              {syncStatus === "syncing" && (
+                <span className="sync-badge syncing" title="Guardando cambios en Cloudflare D1...">
+                  <RefreshCw size={11} className="sync-spinner" />
+                  <span className="sync-text">Guardando...</span>
+                </span>
+              )}
+              {syncStatus === "local" && (
+                <span className="sync-badge local" title="Modo local (D1 pendiente o sin conexión)">
+                  <span className="sync-dot local"></span>
+                  <span className="sync-text">Local</span>
+                </span>
+              )}
+              {syncStatus === "error" && (
+                <span className="sync-badge error" title="Fallo de red al sincronizar con D1">
+                  <span className="sync-dot error"></span>
+                  <span className="sync-text">Reintentando</span>
+                </span>
+              )}
             </div>
           </div>
 
@@ -3263,6 +3339,65 @@ body, html {
   padding: 10px 16px;
   border-radius: 24px;
   box-shadow: 0 8px 32px -6px rgba(15, 23, 42, 0.07);
+}
+.header-sync-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+.sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.sync-badge.synced {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+.sync-badge.syncing {
+  background: rgba(234, 179, 8, 0.14);
+  color: #b45309;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+.sync-badge.local {
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+.sync-badge.error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.sync-dot.synced {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+}
+.sync-dot.local {
+  background: #94a3b8;
+}
+.sync-dot.error {
+  background: #ef4444;
+}
+.sync-spinner {
+  animation: spin 1.2s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 .header-brand {
   display: flex;
