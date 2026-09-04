@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Check, Plus, Trash2, ArrowRight, Home, History, CreditCard,
   PiggyBank, Sparkles, AlertCircle, RefreshCw, X, Calendar,
@@ -997,6 +998,7 @@ export default function App() {
       ingresosBaseTotal,
       extrasParaDeudas,
       extrasParaAhorro,
+      totalExtrasParaAhorro: extrasParaAhorro,
       totalIngresosConExtras,
       gastosTotal,
       gastosPagados,
@@ -1011,6 +1013,11 @@ export default function App() {
       focalDebt,
       abonosPlaneados,
       abonosPagados,
+      totalPagado:
+        gastosPagados +
+        abonosPagados +
+        (active?.ahorroProgramado?.pagado ? ahorroMonto : 0) +
+        (active?.dineroLibre?.pagado ? libreMonto : 0),
       davidStats,
       evethStats,
       totalDeuda: debts.reduce((s, d) => s + d.saldo, 0),
