@@ -608,12 +608,12 @@ function SnoopyMoneyLoader({ isFading }) {
           <div className="money-bill-fly bill-fly-6">💸</div>
         </div>
 
-        {/* Personaje Snoopy con billetes */}
+        {/* Personaje Snoopy con bolsa de dinero y billetes */}
         <div className="snoopy-img-stage">
           <div className="snoopy-halo-ring" />
           <img
-            src="/snoopy-money.jpg"
-            alt="Snoopy contando billetes"
+            src="/snoopy-banker.png"
+            alt="Snoopy banquero contando billetes"
             className="snoopy-money-character"
           />
         </div>
@@ -1800,7 +1800,7 @@ export default function App() {
       <aside className={"mobile-sidebar-drawer " + (menuOpen ? "open" : "")}>
         <div className="drawer-header">
           <div className="drawer-brand">
-            <img src="/snoopy-logo.jpg" alt="Snoopy Bank" className="drawer-logo" />
+            <img src="/snoopy-banker.png" alt="Snoopy Bank" className="drawer-logo" />
             <div className="drawer-brand-text">
               <span className="drawer-badge">Planificador Familiar</span>
               <h3 className="drawer-title">Snoopy Bank</h3>
@@ -1929,7 +1929,7 @@ export default function App() {
             >
               <div className="header-logo-container">
                 <img
-                  src="/snoopy-logo.jpg"
+                  src="/snoopy-banker.png"
                   alt="Snoopy Bank Logo"
                   className="header-snoopy-logo"
                 />
@@ -3091,13 +3091,13 @@ export default function App() {
                 <div className="hb-actions-wrap">
                   <button
                     type="button"
-                    className={"manual-save-btn hb-save-btn " + (saveStatusAnim === "saved" ? "btn-saved" : saveStatusAnim === "saving" ? "btn-saving" : "")}
+                    className={"hb-save-btn " + (saveStatusAnim === "saved" ? "btn-saved" : saveStatusAnim === "saving" ? "btn-saving" : "")}
                     onClick={handleManualSave}
                     title="Guardar todos los pagos y cambios ahora en el dispositivo y la nube"
                   >
                     {saveStatusAnim === "saving" ? (
                       <>
-                        <RefreshCw size={16} className="sync-spinner" />
+                        <RefreshCw size={17} className="sync-spinner" />
                         <span>Guardando...</span>
                       </>
                     ) : saveStatusAnim === "saved" ? (
@@ -3107,19 +3107,19 @@ export default function App() {
                       </>
                     ) : (
                       <>
-                        <Save size={16} />
+                        <Save size={17} />
                         <span>Guardar cambios</span>
                       </>
                     )}
                   </button>
                   <button
                     type="button"
-                    className="glass-btn-primary close-q-btn-bottom"
+                    className="close-q-btn-bottom"
                     onClick={() => setShowCloseModal(true)}
                   >
-                    <Check size={18} />
+                    <Check size={17} />
                     <span>Cerrar quincena ({periodLabel(active.tipo, active.mes, active.anio)})</span>
-                    <ArrowRight size={18} />
+                    <ArrowRight size={17} />
                   </button>
                 </div>
               </div>
@@ -4010,7 +4010,7 @@ body, html {
   width: 52px;
   height: 52px;
   border-radius: 16px;
-  object-fit: cover;
+  object-fit: contain;
   background: #ffffff;
   border: 2px solid rgba(255, 255, 255, 0.95);
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
@@ -4107,7 +4107,9 @@ body, html {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #ffffff;
+  padding: 2px;
   border: 2px solid rgba(255, 255, 255, 0.95);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
 }
@@ -6219,82 +6221,60 @@ input[type=number] {
   border-radius: 999px;
   transition: width 0.35s ease;
 }
+/* Botones de Control de Gastos - Con la estética de píldora del proyecto */
 .gp-filter-tabs {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(241, 245, 249, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  padding: 5px;
-  border-radius: 14px;
-  border: 1px solid rgba(226, 232, 240, 0.85);
+  gap: 8px;
   flex-wrap: wrap;
+  margin-top: 6px;
 }
 .gp-tab {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  background: transparent;
-  border: 1px solid transparent;
-  padding: 6px 13px;
-  border-radius: 10px;
-  font-size: 12.5px;
-  font-weight: 500;
+  gap: 8px;
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13.5px;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.18s ease;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
   user-select: none;
 }
 .gp-tab:hover {
-  background: rgba(255, 255, 255, 0.85);
+  background: #ffffff;
   color: var(--text-dark);
+  border-color: #94a3b8;
   transform: translateY(-1px);
 }
 .gp-tab.active {
-  background: #ffffff;
-  color: var(--text-dark);
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
   font-weight: 600;
-  box-shadow: 0 3px 10px -2px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04);
-  border-color: rgba(255, 255, 255, 0.95);
-}
-.gp-tab.gp-tab-pendientes.active {
-  color: #b45309;
-  background: #ffffff;
-  border-color: rgba(245, 158, 11, 0.3);
-  box-shadow: 0 3px 10px -2px rgba(245, 158, 11, 0.15);
-}
-.gp-tab.gp-tab-pagados.active {
-  color: #047857;
-  background: #ffffff;
-  border-color: rgba(16, 185, 129, 0.3);
-  box-shadow: 0 3px 10px -2px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
 }
 .gp-tab-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 20px;
-  height: 20px;
+  height: 19px;
   padding: 0 6px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
-  background: rgba(148, 163, 184, 0.18);
-  color: #475569;
-  transition: all 0.2s ease;
-}
-.gp-tab.active .gp-tab-badge {
   background: rgba(15, 23, 42, 0.08);
   color: var(--text-dark);
+  transition: all 0.18s ease;
 }
-.gp-tab.gp-tab-pendientes.active .badge-pending {
-  background: rgba(245, 158, 11, 0.2);
-  color: #b45309;
-}
-.gp-tab.gp-tab-pagados.active .badge-paid {
-  background: rgba(16, 185, 129, 0.2);
-  color: #047857;
+.gp-tab.active .gp-tab-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
 }
 .empty-gastos-state {
   padding: 16px;
@@ -6306,18 +6286,73 @@ input[type=number] {
   margin-bottom: 8px;
 }
 
-/* Barra inferior de acciones del Home */
+/* Barra inferior de acciones del Home - Botones Proporcionales de Misma Altura */
 .hb-actions-wrap {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
-.hb-save-btn {
-  padding: 12px 22px;
-  font-size: 14.5px;
+.hb-actions-wrap .hb-save-btn,
+.hb-actions-wrap .close-q-btn-bottom {
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  box-sizing: border-box;
   border-radius: 999px;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 24px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  border: none;
+}
+.hb-actions-wrap .hb-save-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.hb-actions-wrap .hb-save-btn:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.38);
+}
+.hb-actions-wrap .hb-save-btn.btn-saving {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+}
+.hb-actions-wrap .hb-save-btn.btn-saved {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.4);
+}
+.hb-actions-wrap .close-q-btn-bottom {
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(4, 120, 87, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.hb-actions-wrap .close-q-btn-bottom:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 20px rgba(4, 120, 87, 0.45);
+}
+@media (max-width: 640px) {
+  .hb-actions-wrap {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .hb-actions-wrap .hb-save-btn,
+  .hb-actions-wrap .close-q-btn-bottom {
+    width: 100%;
+    height: 48px;
+    justify-content: center;
+  }
 }
 .glass-btn-secondary {
   display: inline-flex;
@@ -6813,32 +6848,7 @@ input[type=number] {
   margin: 0;
   line-height: 1.35;
 }
-.close-q-btn-bottom {
-  padding: 12px 22px;
-  font-size: 14.5px;
-  border-radius: 999px;
-  font-weight: 600;
-  box-shadow: 0 6px 20px -4px rgba(16, 185, 129, 0.35);
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-.close-q-btn-bottom:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px -4px rgba(16, 185, 129, 0.45);
-}
-@media (max-width: 640px) {
-  .home-bottom-close-bar {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 14px 12px;
-    gap: 12px;
-  }
-  .close-q-btn-bottom {
-    width: 100%;
-    justify-content: center;
-    padding: 12px 16px;
-  }
-}
+
 
 .animate-fade-in { animation: fadeIn 0.25s ease-out forwards; }
 @keyframes fadeIn {
@@ -6980,11 +6990,10 @@ input[type=number] {
 
 .snoopy-money-character {
   position: relative;
-  width: 160px;
-  height: 160px;
+  width: 175px;
+  height: 175px;
   object-fit: contain;
-  mix-blend-mode: multiply;
-  filter: drop-shadow(0 6px 12px rgba(16, 185, 129, 0.15));
+  filter: drop-shadow(0 10px 20px rgba(16, 185, 129, 0.22));
   animation: snoopyCountingBob 1.4s infinite ease-in-out;
   user-select: none;
   -webkit-user-drag: none;
