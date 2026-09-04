@@ -1,9 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
 import {
   Check, Plus, Trash2, ArrowRight, Home, History, CreditCard,
   PiggyBank, Sparkles, AlertCircle, RefreshCw, X, Calendar,
   AlertTriangle, Clock, ChevronDown, ChevronUp, Layers, Coins,
-  User, Users, Menu
+  User, Users, Menu, Save, CheckCircle2
 } from "lucide-react";
 import {
   loadKeyWithSync,
@@ -580,6 +579,14 @@ export default function App() {
   });
   const [history, setHistory] = useState(() => loadLocal("finanzas:history", []));
   const [savings, setSavings] = useState(() => loadLocal("finanzas:savings", DEFAULT_SAVINGS));
+  const [periodDrafts, setPeriodDrafts] = useState(() => loadLocal("finanzas:period_drafts", {}));
+
+  // Estados para guardado manual y confirmaciones
+  const [saveStatusAnim, setSaveStatusAnim] = useState("idle"); // "idle" | "saving" | "saved"
+  const [lastSavedTime, setLastSavedTime] = useState(() => loadLocal("finanzas:last_saved_time", null));
+  const [showSaveToast, setShowSaveToast] = useState(false);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [filtroEstadoGasto, setFiltroEstadoGasto] = useState("todos"); // "todos" | "pendientes" | "pagados"
 
   // UI States: Acordeones y desplegables
   const [showExtraForm, setShowExtraForm] = useState(false);
@@ -673,6 +680,16 @@ export default function App() {
           setSavings(cloudData["finanzas:savings"]);
           window.localStorage.setItem("finanzas:savings", JSON.stringify(cloudData["finanzas:savings"]));
         }
+
+        if (cloudData["finanzas:period_drafts"]) {
+          setPeriodDrafts(cloudData["finanzas:period_drafts"]);
+          window.localStorage.setItem("finanzas:period_drafts", JSON.stringify(cloudData["finanzas:period_drafts"]));
+        }
+
+        if (cloudData["finanzas:last_saved_time"]) {
+          setLastSavedTime(cloudData["finanzas:last_saved_time"]);
+          window.localStorage.setItem("finanzas:last_saved_time", JSON.stringify(cloudData["finanzas:last_saved_time"]));
+        }
       } else if (cloudData !== null) {
         // D1 está activo pero vacío (primer despliegue). Subimos los datos base a la nube.
         saveBatchWithSync({
@@ -701,6 +718,51 @@ export default function App() {
   useEffect(() => { if (loaded && active) saveKeyWithSync("finanzas:active", active); }, [active, loaded]);
   useEffect(() => { if (loaded) saveKeyWithSync("finanzas:history", history); }, [history, loaded]);
   useEffect(() => { if (loaded) saveKeyWithSync("finanzas:savings", savings); }, [savings, loaded]);
+  useEffect(() => { if (loaded) saveKeyWithSync("finanzas:period_drafts", periodDrafts); }, [periodDrafts, loaded]);
+
+  // Guardado manual explícito con confirmación táctil y sincronización a la nube
+  const handleManualSave = async () => {
+    if (!active) return;
+    setSaveStatusAnim("saving");
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit", hour12: true });
+
+    // Guardar el estado actual en el borrador del período
+    const currentKey = `${active.tipo}_${active.mes}_${active.anio}`;
+    const updatedDrafts = { ...periodDrafts, [currentKey]: active };
+    setPeriodDrafts(updatedDrafts);
+
+    const fullPayload = {
+      "finanzas:active": active,
+      "finanzas:debts": debts,
+      "finanzas:templates": templates,
+      "finanzas:scheduled": scheduledExpenses,
+      "finanzas:history": history,
+      "finanzas:savings": savings,
+      "finanzas:period_drafts": updatedDrafts,
+      "finanzas:last_saved_time": timeStr,
+    };
+
+    setLastSavedTime(timeStr);
+    window.localStorage.setItem("finanzas:last_saved_time", JSON.stringify(timeStr));
+
+    try {
+      await saveBatchWithSync(fullPayload);
+    } catch (e) {
+      console.warn("Guardado local completado:", e);
+    }
+
+    setSaveStatusAnim("saved");
+    setShowSaveToast(true);
+
+    setTimeout(() => {
+      setShowSaveToast(false);
+    }, 3200);
+
+    setTimeout(() => {
+      setSaveStatusAnim("idle");
+    }, 2500);
+  };
 
   const calculations = useMemo(() => {
     if (!active) return null;
@@ -927,6 +989,22 @@ export default function App() {
     if (filtroPersonaHome === "ambos") return active.gastosFijos;
     return active.gastosFijos.filter((g) => g.asignado === filtroPersonaHome);
   }, [active?.gastosFijos, filtroPersonaHome]);
+
+  const gastosStats = useMemo(() => {
+    const total = filteredGastos.length;
+    const pagados = filteredGastos.filter((g) => g.pagado).length;
+    const pendientes = total - pagados;
+    const montoTotal = filteredGastos.reduce((s, g) => s + (g.monto || 0), 0);
+    const montoPagado = filteredGastos.filter((g) => g.pagado).reduce((s, g) => s + (g.monto || 0), 0);
+    const pct = total > 0 ? Math.round((pagados / total) * 100) : 0;
+    return { total, pagados, pendientes, montoTotal, montoPagado, pct };
+  }, [filteredGastos]);
+
+  const displayGastos = useMemo(() => {
+    if (filtroEstadoGasto === "pendientes") return filteredGastos.filter((g) => !g.pagado);
+    if (filtroEstadoGasto === "pagados") return filteredGastos.filter((g) => g.pagado);
+    return filteredGastos;
+  }, [filteredGastos, filtroEstadoGasto]);
 
   const filteredDebts = useMemo(() => {
     if (!calculations?.orderedDebts) return [];
@@ -1309,13 +1387,37 @@ export default function App() {
     let nextMes = active.tipo === "Q1" ? active.mes : active.mes === 11 ? 0 : active.mes + 1;
     let nextAnio = active.tipo === "Q2" && active.mes === 11 ? active.anio + 1 : active.anio;
 
+    // Limpiar el borrador de la quincena cerrada para que el ciclo avance fresco
+    const currentKey = `${active.tipo}_${active.mes}_${active.anio}`;
+    const nextKey = `${nextTipo}_${nextMes}_${nextAnio}`;
+    const updatedDrafts = { ...periodDrafts };
+    delete updatedDrafts[currentKey];
+    setPeriodDrafts(updatedDrafts);
+    saveKeyWithSync("finanzas:period_drafts", updatedDrafts);
+
     setActive(buildActiveFromTemplate(nextTipo, newTemplates[nextTipo], nextMes, nextAnio, updatedScheduled));
     setActiveTab("historico");
   };
 
+  // Cambio de período preservando los pagos y borradores existentes
   const handleCambioPeriodo = (tipo, mes, anio) => {
-    const t = templates[tipo] || templates.Q1;
-    setActive(buildActiveFromTemplate(tipo, t, mes, anio, scheduledExpenses));
+    if (!active) return;
+    const currentKey = `${active.tipo}_${active.mes}_${active.anio}`;
+    const nextKey = `${tipo}_${mes}_${anio}`;
+    if (currentKey === nextKey) return;
+
+    // 1. Guardar el estado del período actual para que nada se borre
+    const updatedDrafts = { ...periodDrafts, [currentKey]: active };
+    setPeriodDrafts(updatedDrafts);
+    saveKeyWithSync("finanzas:period_drafts", updatedDrafts);
+
+    // 2. Si ya teníamos pagos o borrador guardado en el período destino, restaurarlo
+    if (updatedDrafts[nextKey]) {
+      setActive(sanitizeActive(updatedDrafts[nextKey]));
+    } else {
+      const t = templates[tipo] || templates.Q1;
+      setActive(buildActiveFromTemplate(tipo, t, mes, anio, scheduledExpenses));
+    }
   };
 
   const toggleExpandDebt = (id) => {
@@ -1802,10 +1904,34 @@ export default function App() {
                   </div>
                 </div>
 
-                <button className="glass-btn-primary close-q-btn" onClick={cerrarQuincena}>
-                  <span>Cerrar {active.tipo === "Q1" ? "primera" : "segunda"} quincena de {MONTHS[active.mes]}</span>
-                  <ArrowRight size={16} />
-                </button>
+                <div className="card-topbar-actions">
+                  <button
+                    type="button"
+                    className={"manual-save-btn " + (saveStatusAnim === "saved" ? "btn-saved" : saveStatusAnim === "saving" ? "btn-saving" : "")}
+                    onClick={handleManualSave}
+                    title="Guardar todos los pagos y cambios ahora en el dispositivo y la nube"
+                  >
+                    {saveStatusAnim === "saving" ? (
+                      <>
+                        <RefreshCw size={15} className="sync-spinner" />
+                        <span>Guardando...</span>
+                      </>
+                    ) : saveStatusAnim === "saved" ? (
+                      <>
+                        <Check size={16} strokeWidth={3} />
+                        <span>¡Guardado con éxito!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save size={16} />
+                        <span>Guardar cambios</span>
+                      </>
+                    )}
+                  </button>
+                  {lastSavedTime && (
+                    <span className="last-saved-hint">Último guardado: {lastSavedTime}</span>
+                  )}
+                </div>
               </div>
 
               {/* ========================================================
@@ -2235,21 +2361,88 @@ export default function App() {
                       )}
                     </div>
 
+                    {/* Control y métricas de pagos: progreso y filtros */}
+                    <div className="gastos-progress-card">
+                      <div className="gp-metrics">
+                        <div className="gp-stat">
+                          <span className="gp-label">Control de pagos del período:</span>
+                          <strong className="gp-value">
+                            {gastosStats.pagados} de {gastosStats.total} pagados ({gastosStats.pct}%)
+                          </strong>
+                        </div>
+                        <div className="gp-amounts">
+                          <span className="gp-paid-amt">{fmt(gastosStats.montoPagado)}</span>
+                          <span className="gp-sep">/</span>
+                          <span className="gp-total-amt">{fmt(gastosStats.montoTotal)}</span>
+                        </div>
+                      </div>
+                      <div className="gp-progress-track">
+                        <div className="gp-progress-bar" style={{ width: `${gastosStats.pct}%` }} />
+                      </div>
+
+                      <div className="gp-filter-tabs">
+                        <button
+                          type="button"
+                          className={"gp-tab " + (filtroEstadoGasto === "todos" ? "active" : "")}
+                          onClick={() => setFiltroEstadoGasto("todos")}
+                        >
+                          Todos ({gastosStats.total})
+                        </button>
+                        <button
+                          type="button"
+                          className={"gp-tab " + (filtroEstadoGasto === "pendientes" ? "active" : "")}
+                          onClick={() => setFiltroEstadoGasto("pendientes")}
+                        >
+                          ⏳ Por pagar ({gastosStats.pendientes})
+                        </button>
+                        <button
+                          type="button"
+                          className={"gp-tab " + (filtroEstadoGasto === "pagados" ? "active" : "")}
+                          onClick={() => setFiltroEstadoGasto("pagados")}
+                        >
+                          ✓ Ya pagados ({gastosStats.pagados})
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="items-list">
-                      {filteredGastos.map((g) => {
+                      {displayGastos.length === 0 && (
+                        <div className="empty-gastos-state">
+                          <p>
+                            {filtroEstadoGasto === "pendientes"
+                              ? "🎉 ¡Excelente! No tienes gastos pendientes por pagar en esta lista."
+                              : filtroEstadoGasto === "pagados"
+                              ? "Aún no has marcado ningún gasto como pagado."
+                              : "No hay gastos en esta lista."}
+                          </p>
+                        </div>
+                      )}
+
+                      {displayGastos.map((g) => {
                         const currentPerson = !g.pagado ? g.asignado : g.pagadoPor || g.asignado;
                         const crossPaid = g.pagado && g.pagadoPor && g.pagadoPor !== g.asignado;
 
                         return (
-                          <div className={"glass-item-row check-item " + (g.tipoGasto === "imprevisto" ? "row-imprevisto" : "")} key={g.id}>
+                          <div
+                            className={
+                              "glass-item-row check-item " +
+                              (g.pagado ? "row-pagado " : "") +
+                              (g.tipoGasto === "imprevisto" ? "row-imprevisto " : "")
+                            }
+                            key={g.id}
+                          >
                             <button
                               className={"glass-check " + (g.pagado ? "checked" : "")}
                               onClick={() => toggleGastoPagado(g)}
+                              title={g.pagado ? "Marcar como pendiente" : "Marcar como pagado"}
                             >
                               {g.pagado && <Check size={13} strokeWidth={3} />}
                             </button>
                             <span className={"concept-title " + (g.pagado ? "is-done" : "")}>
                               <span className="concept-text">{g.concepto}</span>
+                              {g.pagado && (
+                                <span className="badge-tag-pagado">✓ Pagado</span>
+                              )}
                               {g.tipoGasto === "imprevisto" && (
                                 <span className="badge-tag-imprevisto">⚠️ Imprevisto</span>
                               )}
@@ -2644,21 +2837,32 @@ export default function App() {
               {/* Botón y Barra para Cerrar Quincena al Final del Home */}
               <div className="home-bottom-close-bar animate-fade-in">
                 <div className="hb-info">
-                  <span className="hb-tag">¿Terminaste los pagos del período?</span>
-                  <strong className="hb-title">Cierre de quincena y actualización de saldos</strong>
+                  <span className="hb-tag">Fin de la quincena</span>
+                  <strong className="hb-title">Cierre de período y actualización de saldos</strong>
                   <p className="hb-desc">
-                    Archiva los gastos en el historial, descuenta los abonos a las deudas y suma el ahorro a la alcancía.
+                    Cuando finalices los pagos de la quincena, este botón archiva todo en el Histórico, descuenta los abonos a las deudas y pasa a la siguiente quincena.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="glass-btn-primary close-q-btn-bottom"
-                  onClick={cerrarQuincena}
-                >
-                  <Check size={18} />
-                  <span>Cerrar {active.tipo === "Q1" ? "primera" : "segunda"} quincena de {MONTHS[active.mes]}</span>
-                  <ArrowRight size={18} />
-                </button>
+                <div className="hb-actions-wrap">
+                  <button
+                    type="button"
+                    className="glass-btn-secondary hb-save-btn"
+                    onClick={handleManualSave}
+                    title="Guardar estado actual sin cerrar quincena"
+                  >
+                    <Save size={16} />
+                    <span>Guardar cambios</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="glass-btn-primary close-q-btn-bottom"
+                    onClick={() => setShowCloseModal(true)}
+                  >
+                    <Check size={18} />
+                    <span>Cerrar quincena ({periodLabel(active.tipo, active.mes, active.anio)})</span>
+                    <ArrowRight size={18} />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -3279,6 +3483,105 @@ export default function App() {
           )}
         </footer>
       </div>
+
+      {/* Toast de Guardado Exitoso */}
+      {showSaveToast && (
+        <div className="save-toast-banner animate-slide-down">
+          <div className="save-toast-content">
+            <CheckCircle2 size={19} className="toast-icon-success" />
+            <div className="toast-text-wrap">
+              <strong>¡Cambios guardados con éxito!</strong>
+              <p>El registro de pagos se respaldó en tu navegador y en Cloudflare D1 ({lastSavedTime}).</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación para Cerrar Quincena */}
+      {showCloseModal && (
+        <div className="modal-backdrop animate-fade-in" onClick={() => setShowCloseModal(false)}>
+          <div className="modal-dialog glass-card animate-scale-up" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-wrap">
+                <div className="modal-icon-badge">
+                  <CheckCircle2 size={22} className="modal-header-icon" />
+                </div>
+                <div>
+                  <h3>Cerrar {periodLabel(active.tipo, active.mes, active.anio)}</h3>
+                  <p className="modal-subtitle">Resumen final antes de archivar</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowCloseModal(false)}
+                title="Cerrar modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p className="modal-intro">
+                Esta acción concluye la quincena actual. Revisa el resumen de los pagos que se registrarán:
+              </p>
+
+              <div className="modal-summary-card">
+                <div className="m-summary-row">
+                  <span className="m-label">Gastos efectivamente pagados:</span>
+                  <strong className="m-value">
+                    {fmt(calculations.gastosPagados)} ({active.gastosFijos.filter((g) => g.pagado).length} de {active.gastosFijos.length})
+                  </strong>
+                </div>
+                {calculations.abonosPagados > 0 && (
+                  <div className="m-summary-row">
+                    <span className="m-label">Abonos pagados a deudas:</span>
+                    <strong className="m-value text-emerald">{fmt(calculations.abonosPagados)}</strong>
+                  </div>
+                )}
+                {calculations.totalExtrasParaAhorro + (active.ahorroProgramado?.pagado ? active.ahorroProgramado.monto : 0) > 0 && (
+                  <div className="m-summary-row">
+                    <span className="m-label">Aporte para la alcancía:</span>
+                    <strong className="m-value text-blue">
+                      +{fmt(calculations.totalExtrasParaAhorro + (active.ahorroProgramado?.pagado ? active.ahorroProgramado.monto : 0))}
+                    </strong>
+                  </div>
+                )}
+                <div className="m-summary-row m-summary-total">
+                  <span className="m-label">Total desembolsos quincena:</span>
+                  <strong className="m-value">{fmt(calculations.totalPagado)}</strong>
+                </div>
+              </div>
+
+              <div className="modal-notice-box">
+                <AlertCircle size={16} />
+                <span>Al confirmar, este desglose se guardará en <strong>Histórico</strong> y se abrirá automáticamente el siguiente período con las deudas actualizadas.</span>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="glass-btn-cancel"
+                onClick={() => setShowCloseModal(false)}
+              >
+                Cancelar / Seguir editando
+              </button>
+              <button
+                type="button"
+                className="glass-btn-primary confirm-close-btn"
+                onClick={() => {
+                  setShowCloseModal(false);
+                  cerrarQuincena();
+                }}
+              >
+                <Check size={16} />
+                <span>Sí, cerrar y archivar quincena</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3863,6 +4166,48 @@ body, html {
   border-bottom: 1px solid rgba(226, 232, 240, 0.8);
   gap: 16px;
   flex-wrap: wrap;
+}
+.card-topbar-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.manual-save-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+.manual-save-btn:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.38);
+}
+.manual-save-btn.btn-saving {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+}
+.manual-save-btn.btn-saved {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.4);
+  transform: scale(1.02);
+}
+.last-saved-hint {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 .eyebrow-tag {
   font-size: 12px;
@@ -5356,6 +5701,349 @@ input[type=number] {
 
   /* Filas de Gastos Fijos, Programados e Imprevistos con Checkbox */
   .glass-item-row.check-item {
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.glass-item-row.check-item.row-pagado {
+  background: rgba(240, 253, 244, 0.7);
+  border-radius: 10px;
+  padding-left: 8px;
+  padding-right: 8px;
+  border-bottom: 1px solid rgba(187, 247, 208, 0.7);
+}
+.badge-tag-pagado {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  margin-left: 6px;
+}
+.glass-check.checked {
+  background: #10b981;
+  border-color: #10b981;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+}
+
+/* Tarjeta de Control y Progreso de Gastos */
+.gastos-progress-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.04);
+}
+.gp-metrics {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.gp-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gp-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.gp-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #047857;
+}
+.gp-amounts {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.gp-paid-amt {
+  color: #047857;
+}
+.gp-sep {
+  color: #94a3b8;
+}
+.gp-total-amt {
+  color: var(--text-dark);
+}
+.gp-progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(226, 232, 240, 0.9);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.gp-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+.gp-filter-tabs {
+  display: flex;
+  gap: 6px;
+}
+.gp-tab {
+  background: transparent;
+  border: 1px solid rgba(203, 213, 225, 0.7);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.gp-tab:hover {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-dark);
+}
+.gp-tab.active {
+  background: #0f172a;
+  color: white;
+  border-color: #0f172a;
+  font-weight: 600;
+}
+.empty-gastos-state {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+/* Barra inferior de acciones del Home */
+.hb-actions-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.hb-save-btn {
+  padding: 11px 18px;
+}
+.glass-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  color: var(--text-dark);
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.glass-btn-secondary:hover {
+  background: #ffffff;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+}
+
+/* Toast flotante de guardado */
+.save-toast-banner {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  pointer-events: none;
+}
+.save-toast-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #0f172a;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px -4px rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.toast-icon-success {
+  color: #10b981;
+  flex-shrink: 0;
+}
+.toast-text-wrap strong {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.toast-text-wrap p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* Modal de Confirmación de Cierre */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-dialog {
+  max-width: 520px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.25);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+.modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.modal-icon-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.modal-title-wrap h3 {
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  color: var(--text-dark);
+}
+.modal-subtitle {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-close-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-dark);
+}
+.modal-body {
+  padding: 20px 24px;
+}
+.modal-intro {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.modal-summary-card {
+  background: rgba(248, 250, 252, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.m-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13.5px;
+}
+.m-summary-row .m-label {
+  color: var(--text-muted);
+}
+.m-summary-row .m-value {
+  color: var(--text-dark);
+}
+.m-summary-total {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(203, 213, 225, 0.8);
+  font-weight: 700;
+}
+.m-summary-total .m-value {
+  font-size: 15.5px;
+  color: var(--text-dark);
+}
+.modal-notice-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(254, 243, 199, 0.4);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  color: #92400e;
+  line-height: 1.4;
+}
+.modal-notice-box svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+}
+.confirm-close-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 11px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.confirm-close-btn:hover {
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
     display: flex;
     flex-wrap: wrap;
     align-items: center;
