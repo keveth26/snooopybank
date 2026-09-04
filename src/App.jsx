@@ -2,7 +2,7 @@ import {
   Check, Plus, Trash2, ArrowRight, Home, History, CreditCard,
   PiggyBank, Sparkles, AlertCircle, RefreshCw, X, Calendar,
   AlertTriangle, Clock, ChevronDown, ChevronUp, Layers, Coins,
-  User, Users, Menu, Save, CheckCircle2
+  User, Users, Menu, Save, CheckCircle2, Lock, Unlock
 } from "lucide-react";
 import {
   loadKeyWithSync,
@@ -764,6 +764,53 @@ export default function App() {
     }, 2500);
   };
 
+  // Determinar si el período actual ya fue archivado en el Histórico
+  const currentHistoryItem = useMemo(() => {
+    if (!active) return null;
+    return history.find(
+      (h) => (h.tipo === active.tipo && h.mes === active.mes && h.anio === active.anio) || h.label === periodLabel(active.tipo, active.mes, active.anio)
+    );
+  }, [active, history]);
+
+  // Los 3 Estados del Ciclo de Vida: 1. Vacía (default) | 2. En progreso | 3. Archivada (cerrada)
+  const quincenaLifecycleState = useMemo(() => {
+    if (!active) return "vacia";
+    if (currentHistoryItem) return "archivada";
+
+    const tienePagos =
+      active.gastosFijos?.some((g) => g.pagado) ||
+      (active.ingresosExtras && active.ingresosExtras.length > 0) ||
+      Object.values(active.abonos || {}).some((a) => a?.pagado) ||
+      active.ahorroProgramado?.pagado ||
+      active.dineroLibre?.pagado;
+
+    return tienePagos ? "en_progreso" : "vacia";
+  }, [active, currentHistoryItem]);
+
+  // Reabrir una quincena archivada para permitir correcciones
+  const handleReabrirQuincena = (historyItem) => {
+    if (!historyItem) return;
+    const conf = window.confirm(
+      `¿Deseas reabrir la "${historyItem.label}"? Esto la devolverá al estado "2. En progreso" para que puedas hacer ajustes, registrar nuevos pagos y volver a guardar.`
+    );
+    if (!conf) return;
+
+    // 1. Quitarla del historial
+    const updatedHistory = history.filter((h) => h.id !== historyItem.id);
+    setHistory(updatedHistory);
+    saveKeyWithSync("finanzas:history", updatedHistory);
+
+    // 2. Restaurar el estado activo con los datos que tenía al cerrar
+    if (historyItem.activeState) {
+      setActive(sanitizeActive(historyItem.activeState));
+    } else {
+      const t = templates[historyItem.tipo || "Q1"] || templates.Q1;
+      setActive(buildActiveFromTemplate(historyItem.tipo || "Q1", t, historyItem.mes ?? 0, historyItem.anio ?? 2026, scheduledExpenses));
+    }
+
+    setActiveTab("home");
+  };
+
   const calculations = useMemo(() => {
     if (!active) return null;
 
@@ -1313,6 +1360,10 @@ export default function App() {
     const snapshot = {
       id: uid(),
       label,
+      tipo: active.tipo,
+      mes: active.mes,
+      anio: active.anio,
+      activeState: JSON.parse(JSON.stringify(active)),
       cerradaEl: new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }),
       chartData: {
         gastos: calculations.gastosPagados,
@@ -1869,7 +1920,29 @@ export default function App() {
             <div className="glass-card main-q-card">
               <div className="card-topbar">
                 <div className="q-period-selector">
-                  <span className="eyebrow-tag">Período en curso</span>
+                  <div className="q-period-header-line">
+                    <span className="eyebrow-tag">Período en curso</span>
+
+                    {/* Distintivo de los 3 estados del ciclo de vida */}
+                    {quincenaLifecycleState === "archivada" && (
+                      <span className="quincena-status-badge status-archivada" title="Esta quincena está cerrada y archivada en el Histórico">
+                        <Lock size={12} />
+                        <span>3. Archivada</span>
+                      </span>
+                    )}
+                    {quincenaLifecycleState === "en_progreso" && (
+                      <span className="quincena-status-badge status-en-progreso" title="Se están registrando pagos en esta quincena">
+                        <span className="status-pulse-dot" />
+                        <span>2. En progreso ({gastosStats.pct}% pagado)</span>
+                      </span>
+                    )}
+                    {quincenaLifecycleState === "vacia" && (
+                      <span className="quincena-status-badge status-vacia" title="Valores base por default listos para iniciar">
+                        <span className="status-gray-dot" />
+                        <span>1. Vacía (Por default)</span>
+                      </span>
+                    )}
+                  </div>
                   <h2>{periodLabel(active.tipo, active.mes, active.anio)}</h2>
                   <div className="pill-controls">
                     <button
@@ -1933,6 +2006,58 @@ export default function App() {
                   )}
                 </div>
               </div>
+
+              {/* Banner Informativo del Estado de la Quincena */}
+              {quincenaLifecycleState === "archivada" && (
+                <div className="archived-period-banner animate-fade-in">
+                  <div className="apb-content">
+                    <div className="apb-icon-wrap">
+                      <Lock size={20} />
+                    </div>
+                    <div>
+                      <strong>Quincena archivada en el Histórico ({currentHistoryItem?.cerradaEl})</strong>
+                      <p>Esta quincena ya fue finalizada formalmente. Los saldos y pagos corresponden al extracto de cierre.</p>
+                    </div>
+                  </div>
+                  <div className="apb-actions">
+                    <button
+                      type="button"
+                      className="glass-btn-secondary apb-btn"
+                      onClick={() => setActiveTab("historico")}
+                    >
+                      <History size={14} />
+                      <span>Ver en Histórico</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="glass-btn-reopen"
+                      onClick={() => handleReabrirQuincena(currentHistoryItem)}
+                      title="Reabrir esta quincena para corregir pagos y volver a guardar"
+                    >
+                      <Unlock size={14} />
+                      <span>Reabrir quincena</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {quincenaLifecycleState === "vacia" && (
+                <div className="vacia-period-banner animate-fade-in">
+                  <Sparkles size={16} className="text-emerald" />
+                  <span>
+                    <strong>1. Quincena vacía (Valores por default):</strong> Cuentas con los sueldos e importes programados de la plantilla. A medida que marques qué se va pagando y pulses <strong>Guardar cambios</strong>, pasará a estar <strong>2. En progreso</strong>.
+                  </span>
+                </div>
+              )}
+
+              {quincenaLifecycleState === "en_progreso" && (
+                <div className="progreso-period-banner animate-fade-in">
+                  <span className="ppb-indicator-dot" />
+                  <span>
+                    <strong>2. Quincena en progreso:</strong> Llevas {gastosStats.pagados} de {gastosStats.total} pagos realizados ({gastosStats.pct}%). Recuerda pulsar <strong>Guardar cambios</strong> para conservar tu avance día a día.
+                  </span>
+                </div>
+              )}
 
               {/* ========================================================
                   GRÁFICA DONUT DE DISTRIBUCIÓN (PRIMERO PARA REVISIÓN RÁPIDA)
@@ -3335,9 +3460,20 @@ export default function App() {
                           <strong className="h-label">{h.label}</strong>
                           <span className="h-date">Cerrada el {h.cerradaEl}</span>
                         </div>
-                        <span className="h-debt-badge">
-                          Deuda restante: {fmt(h.deudaPendienteDespues)}
-                        </span>
+                        <div className="h-top-actions">
+                          <button
+                            type="button"
+                            className="h-reopen-btn"
+                            onClick={() => handleReabrirQuincena(h)}
+                            title="Reabrir quincena para modificarla o corregir"
+                          >
+                            <Unlock size={12} />
+                            <span>Reabrir</span>
+                          </button>
+                          <span className="h-debt-badge">
+                            Deuda restante: {fmt(h.deudaPendienteDespues)}
+                          </span>
+                        </div>
                       </div>
 
                       {h.amortizoCarroCapital && (
@@ -4209,7 +4345,180 @@ body, html {
   color: var(--text-muted);
   font-weight: 500;
 }
-.eyebrow-tag {
+.q-period-header-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.quincena-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+.quincena-status-badge.status-vacia {
+  background: rgba(100, 116, 139, 0.12);
+  color: #475569;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+}
+.quincena-status-badge.status-en-progreso {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.quincena-status-badge.status-archivada {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+  border: 1px solid rgba(99, 102, 241, 0.28);
+}
+.status-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.7);
+  animation: pulse-amber 1.8s infinite;
+}
+@keyframes pulse-amber {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 5px rgba(245, 158, 11, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+.status-gray-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+/* Banners explicativos por estado */
+.vacia-period-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}
+.progreso-period-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(254, 243, 199, 0.35);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  color: #92400e;
+  margin-bottom: 18px;
+}
+.ppb-indicator-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d97706;
+  flex-shrink: 0;
+}
+.archived-period-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background: rgba(238, 242, 255, 0.85);
+  border: 1px solid rgba(199, 210, 254, 0.9);
+  padding: 14px 18px;
+  border-radius: 16px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.apb-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.apb-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.15);
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.apb-content strong {
+  display: block;
+  font-size: 14px;
+  color: #312e81;
+}
+.apb-content p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: #4b5563;
+}
+.apb-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.apb-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+.glass-btn-reopen {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #4f46e5;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.glass-btn-reopen:hover {
+  background: #4f46e5;
+  color: white;
+  transform: translateY(-1px);
+}
+.h-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.h-reopen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  color: var(--text-muted);
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.h-reopen-btn:hover {
+  background: #ffffff;
+  color: #4f46e5;
+  border-color: #c7d2fe;
+}
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
