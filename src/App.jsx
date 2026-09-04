@@ -6128,9 +6128,10 @@ input[type=number] {
     padding: 12px 10px;
     border-radius: 14px;
   }
+}
 
-  /* Filas de Gastos Fijos, Programados e Imprevistos con Checkbox */
-  .glass-item-row.check-item {
+/* Filas de Gastos Fijos, Programados e Imprevistos con Checkbox */
+.glass-item-row.check-item {
   transition: background 0.18s ease, border-color 0.18s ease;
 }
 .glass-item-row.check-item.row-pagado {
@@ -6159,15 +6160,16 @@ input[type=number] {
   box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
 }
 
-/* Tarjeta de Control y Progreso de Gastos */
+/* Tarjeta de Control y Progreso de Gastos - Liquid Glass */
 .gastos-progress-card {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  border-radius: 14px;
-  padding: 12px 14px;
-  margin-bottom: 14px;
-  box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.04);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid rgba(255, 255, 255, 0.95);
+  border-radius: 18px;
+  padding: 16px 18px;
+  margin: 14px 0 16px;
+  box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.05);
 }
 .gp-metrics {
   display: flex;
@@ -6175,7 +6177,7 @@ input[type=number] {
   align-items: center;
   margin-bottom: 8px;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 .gp-stat {
   display: flex;
@@ -6183,19 +6185,20 @@ input[type=number] {
   gap: 6px;
 }
 .gp-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
+  font-weight: 500;
 }
 .gp-value {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
   color: #047857;
 }
 .gp-amounts {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12.5px;
+  gap: 5px;
+  font-size: 13px;
   font-weight: 600;
 }
 .gp-paid-amt {
@@ -6209,11 +6212,11 @@ input[type=number] {
 }
 .gp-progress-track {
   width: 100%;
-  height: 6px;
-  background: rgba(226, 232, 240, 0.9);
+  height: 7px;
+  background: rgba(226, 232, 240, 0.85);
   border-radius: 999px;
   overflow: hidden;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .gp-progress-bar {
   height: 100%;
@@ -6235,6 +6238,8 @@ input[type=number] {
   gap: 8px;
   border: 1px solid rgba(203, 213, 225, 0.85);
   background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   padding: 8px 16px;
   border-radius: 999px;
   font-size: 13.5px;
@@ -6250,13 +6255,14 @@ input[type=number] {
   color: var(--text-dark);
   border-color: #94a3b8;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
 }
 .gp-tab.active {
   background: #0f172a;
   color: #ffffff;
   border-color: #0f172a;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
 }
 .gp-tab-badge {
   display: inline-flex;
@@ -6286,7 +6292,7 @@ input[type=number] {
   margin-bottom: 8px;
 }
 
-/* Barra inferior de acciones del Home - Botones Proporcionales de Misma Altura */
+/* Barra inferior de acciones del Home - Botones Liquid Glass Minimalistas Proporcionales */
 .hb-actions-wrap {
   display: flex;
   align-items: center;
@@ -6313,33 +6319,51 @@ input[type=number] {
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
-  border: none;
 }
+
+/* Guardar cambios: Liquid Glass translúcido con acento esmeralda */
 .hb-actions-wrap .hb-save-btn {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(16, 185, 129, 0.4);
+  color: #047857;
+  box-shadow: 0 4px 16px -2px rgba(16, 185, 129, 0.12), 0 2px 6px rgba(15, 23, 42, 0.04);
 }
 .hb-actions-wrap .hb-save-btn:hover {
+  background: #ffffff;
+  border-color: #10b981;
+  color: #065f46;
   transform: translateY(-1.5px);
-  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.38);
+  box-shadow: 0 8px 22px -4px rgba(16, 185, 129, 0.25);
 }
 .hb-actions-wrap .hb-save-btn.btn-saving {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+  background: rgba(254, 243, 199, 0.9);
+  border-color: #f59e0b;
+  color: #b45309;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.2);
 }
 .hb-actions-wrap .hb-save-btn.btn-saved {
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.4);
+  background: rgba(240, 253, 244, 0.95);
+  border-color: #16a34a;
+  color: #15803d;
+  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.25);
 }
+
+/* Cerrar quincena: Liquid Glass esmeralda vibrante con reflejo brillante */
 .hb-actions-wrap .close-q-btn-bottom {
-  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
-  color: white;
-  box-shadow: 0 4px 14px rgba(4, 120, 87, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.95) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+  box-shadow: 0 6px 20px -4px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .hb-actions-wrap .close-q-btn-bottom:hover {
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  border-color: rgba(255, 255, 255, 0.85);
   transform: translateY(-1.5px);
-  box-shadow: 0 6px 20px rgba(4, 120, 87, 0.45);
+  box-shadow: 0 10px 24px -4px rgba(16, 185, 129, 0.48);
 }
 @media (max-width: 640px) {
   .hb-actions-wrap {
