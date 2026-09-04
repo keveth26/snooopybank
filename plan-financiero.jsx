@@ -554,7 +554,99 @@ function loadLocal(key, fallback) {
   }
 }
 
+function SnoopyMoneyLoader({ isFading }) {
+  const [amount, setAmount] = useState(0);
+  const [loadingTextIndex, setLoadingTextIndex] = useState(0);
+
+  const loadingPhrases = [
+    "Contando billetes...",
+    "Organizando los pagos de la quincena...",
+    "Sincronizando con Cloudflare D1...",
+    "¡Todo listo para empezar!",
+  ];
+
+  useEffect(() => {
+    const target = 2774000;
+    const duration = 1500;
+    const steps = 30;
+    const stepTime = duration / steps;
+    const increment = target / steps;
+    let current = 0;
+
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= target) {
+        setAmount(target);
+        clearInterval(timer);
+      } else {
+        setAmount(Math.round(current));
+      }
+    }, stepTime);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const textInterval = setInterval(() => {
+      setLoadingTextIndex((prev) => (prev + 1) % loadingPhrases.length);
+    }, 550);
+    return () => clearInterval(textInterval);
+  }, [loadingPhrases.length]);
+
+  return (
+    <div className={`snoopy-loader-overlay ${isFading ? "loader-fading" : ""}`}>
+      <div className="loader-ambient-glow" />
+
+      <div className="snoopy-loader-card">
+        {/* Partículas flotantes de billetes animados */}
+        <div className="money-particles-container">
+          <div className="money-bill-fly bill-fly-1">💵</div>
+          <div className="money-bill-fly bill-fly-2">💸</div>
+          <div className="money-bill-fly bill-fly-3">💵</div>
+          <div className="money-bill-fly bill-fly-4">✨</div>
+          <div className="money-bill-fly bill-fly-5">💵</div>
+          <div className="money-bill-fly bill-fly-6">💸</div>
+        </div>
+
+        {/* Personaje Snoopy con billetes */}
+        <div className="snoopy-img-stage">
+          <div className="snoopy-halo-ring" />
+          <img
+            src="/snoopy-money.jpg"
+            alt="Snoopy contando billetes"
+            className="snoopy-money-character"
+          />
+        </div>
+
+        {/* Encabezado */}
+        <div className="snoopy-loader-header">
+          <span className="loader-eyebrow">🐾 Snoopy Bank</span>
+          <h1 className="loader-app-title">Planificador Financiero</h1>
+        </div>
+
+        {/* Contador animado de billetes */}
+        <div className="loader-counter-box">
+          <span className="counter-label">Contando presupuesto:</span>
+          <strong className="counter-amount">{fmt(amount)}</strong>
+        </div>
+
+        {/* Barra de progreso interactiva */}
+        <div className="loader-progress-track">
+          <div className="loader-progress-fill" />
+        </div>
+
+        {/* Frase animada rotativa */}
+        <p className="loader-caption-text">
+          {loadingPhrases[loadingTextIndex]}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  const [showInitialLoader, setShowInitialLoader] = useState(true);
+  const [loaderFading, setLoaderFading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [syncStatus, setSyncStatus] = useState("local");
   const [activeTab, setActiveTab] = useState("home");
@@ -710,6 +802,18 @@ export default function App() {
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  // Animación de bienvenida y conteo de billetes de Snoopy al abrir
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoaderFading(true);
+      setTimeout(() => {
+        setShowInitialLoader(false);
+      }, 500);
+    }, 1800);
+
+    return () => clearTimeout(timer);
   }, []);
 
   // Sincronización híbrida automática: solo activa tras completar la comprobación inicial
@@ -1678,6 +1782,9 @@ export default function App() {
     <div className="glass-root">
       <style>{glassStyles}</style>
 
+      {/* Pantalla de carga animada con Snoopy contando billetes */}
+      {showInitialLoader && <SnoopyMoneyLoader isFading={loaderFading} />}
+
       {/* Orbes ambientales */}
       <div className="ambient-blob blob-emerald" />
       <div className="ambient-blob blob-blue" />
@@ -2515,24 +2622,30 @@ export default function App() {
                       <div className="gp-filter-tabs">
                         <button
                           type="button"
-                          className={"gp-tab " + (filtroEstadoGasto === "todos" ? "active" : "")}
+                          className={"gp-tab gp-tab-todos " + (filtroEstadoGasto === "todos" ? "active" : "")}
                           onClick={() => setFiltroEstadoGasto("todos")}
                         >
-                          Todos ({gastosStats.total})
+                          <Layers size={13} />
+                          <span>Todos</span>
+                          <span className="gp-tab-badge">{gastosStats.total}</span>
                         </button>
                         <button
                           type="button"
-                          className={"gp-tab " + (filtroEstadoGasto === "pendientes" ? "active" : "")}
+                          className={"gp-tab gp-tab-pendientes " + (filtroEstadoGasto === "pendientes" ? "active" : "")}
                           onClick={() => setFiltroEstadoGasto("pendientes")}
                         >
-                          ⏳ Por pagar ({gastosStats.pendientes})
+                          <Clock size={13} />
+                          <span>Por pagar</span>
+                          <span className="gp-tab-badge badge-pending">{gastosStats.pendientes}</span>
                         </button>
                         <button
                           type="button"
-                          className={"gp-tab " + (filtroEstadoGasto === "pagados" ? "active" : "")}
+                          className={"gp-tab gp-tab-pagados " + (filtroEstadoGasto === "pagados" ? "active" : "")}
                           onClick={() => setFiltroEstadoGasto("pagados")}
                         >
-                          ✓ Ya pagados ({gastosStats.pagados})
+                          <CheckCircle2 size={13} />
+                          <span>Ya pagados</span>
+                          <span className="gp-tab-badge badge-paid">{gastosStats.pagados}</span>
                         </button>
                       </div>
                     </div>
@@ -2978,12 +3091,26 @@ export default function App() {
                 <div className="hb-actions-wrap">
                   <button
                     type="button"
-                    className="glass-btn-secondary hb-save-btn"
+                    className={"manual-save-btn hb-save-btn " + (saveStatusAnim === "saved" ? "btn-saved" : saveStatusAnim === "saving" ? "btn-saving" : "")}
                     onClick={handleManualSave}
-                    title="Guardar estado actual sin cerrar quincena"
+                    title="Guardar todos los pagos y cambios ahora en el dispositivo y la nube"
                   >
-                    <Save size={16} />
-                    <span>Guardar cambios</span>
+                    {saveStatusAnim === "saving" ? (
+                      <>
+                        <RefreshCw size={16} className="sync-spinner" />
+                        <span>Guardando...</span>
+                      </>
+                    ) : saveStatusAnim === "saved" ? (
+                      <>
+                        <Check size={17} strokeWidth={3} />
+                        <span>¡Guardado con éxito!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save size={16} />
+                        <span>Guardar cambios</span>
+                      </>
+                    )}
                   </button>
                   <button
                     type="button"
@@ -3608,22 +3735,7 @@ export default function App() {
 
         {/* Footer */}
         <footer className="glass-footer">
-          {!confirmReset ? (
-            <button className="reset-ghost-btn" onClick={() => setConfirmReset(true)}>
-              <RefreshCw size={13} />
-              <span>Reiniciar todo el plan a valores de fábrica</span>
-            </button>
-          ) : (
-            <div className="confirm-reset-box glass-panel">
-              <span>¿Estás seguro de restablecer todos los datos?</span>
-              <button className="glass-btn-danger" onClick={resetAll}>
-                Sí, reiniciar
-              </button>
-              <button className="glass-btn-cancel" onClick={() => setConfirmReset(false)}>
-                <X size={13} /> Cancelar
-              </button>
-            </div>
-          )}
+          <p className="footer-brand-hint">🐾 Snoopy Bank — Gestor Financiero Familiar</p>
         </footer>
       </div>
 
@@ -6108,29 +6220,81 @@ input[type=number] {
   transition: width 0.35s ease;
 }
 .gp-filter-tabs {
-  display: flex;
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
+  background: rgba(241, 245, 249, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 5px;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  flex-wrap: wrap;
 }
 .gp-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   background: transparent;
-  border: 1px solid rgba(203, 213, 225, 0.7);
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 11.5px;
+  border: 1px solid transparent;
+  padding: 6px 13px;
+  border-radius: 10px;
+  font-size: 12.5px;
   font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
 }
 .gp-tab:hover {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.85);
   color: var(--text-dark);
+  transform: translateY(-1px);
 }
 .gp-tab.active {
-  background: #0f172a;
-  color: white;
-  border-color: #0f172a;
+  background: #ffffff;
+  color: var(--text-dark);
   font-weight: 600;
+  box-shadow: 0 3px 10px -2px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04);
+  border-color: rgba(255, 255, 255, 0.95);
+}
+.gp-tab.gp-tab-pendientes.active {
+  color: #b45309;
+  background: #ffffff;
+  border-color: rgba(245, 158, 11, 0.3);
+  box-shadow: 0 3px 10px -2px rgba(245, 158, 11, 0.15);
+}
+.gp-tab.gp-tab-pagados.active {
+  color: #047857;
+  background: #ffffff;
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 3px 10px -2px rgba(16, 185, 129, 0.15);
+}
+.gp-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(148, 163, 184, 0.18);
+  color: #475569;
+  transition: all 0.2s ease;
+}
+.gp-tab.active .gp-tab-badge {
+  background: rgba(15, 23, 42, 0.08);
+  color: var(--text-dark);
+}
+.gp-tab.gp-tab-pendientes.active .badge-pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #b45309;
+}
+.gp-tab.gp-tab-pagados.active .badge-paid {
+  background: rgba(16, 185, 129, 0.2);
+  color: #047857;
 }
 .empty-gastos-state {
   padding: 16px;
@@ -6150,7 +6314,10 @@ input[type=number] {
   flex-wrap: wrap;
 }
 .hb-save-btn {
-  padding: 11px 18px;
+  padding: 12px 22px;
+  font-size: 14.5px;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28);
 }
 .glass-btn-secondary {
   display: inline-flex;
@@ -6683,4 +6850,245 @@ input[type=number] {
 .loading-card { padding: 32px 48px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; border-radius: 20px; }
 .spin-icon { animation: spin 3s linear infinite; color: var(--emerald); }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ========================================================
+   SNOOPY MONEY LOADER (PANTALLA DE CARGA CON ANIMACIÓN)
+   ======================================================== */
+.snoopy-loader-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: radial-gradient(circle at 50% 35%, #ffffff 0%, #f0fdf4 60%, #e6f4ea 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s ease, transform 0.5s ease;
+}
+
+.snoopy-loader-overlay.loader-fading {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(1.02);
+}
+
+.loader-ambient-glow {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, rgba(5, 150, 105, 0.05) 60%, transparent 70%);
+  filter: blur(50px);
+  animation: pulseAmbient 3s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes pulseAmbient {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+.snoopy-loader-card {
+  position: relative;
+  max-width: 420px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1.5px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.12), 0 10px 20px -5px rgba(16, 185, 129, 0.1);
+  border-radius: 28px;
+  padding: 32px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  z-index: 2;
+  overflow: hidden;
+}
+
+/* Partículas flotantes de billetes animados */
+.money-particles-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.money-bill-fly {
+  position: absolute;
+  font-size: 24px;
+  opacity: 0;
+  user-select: none;
+  animation: floatMoneyBill 2.4s infinite ease-in-out;
+}
+
+.bill-fly-1 { left: 12%; top: 40%; animation-delay: 0s; font-size: 26px; }
+.bill-fly-2 { right: 14%; top: 35%; animation-delay: 0.4s; font-size: 22px; }
+.bill-fly-3 { left: 20%; top: 20%; animation-delay: 0.8s; font-size: 20px; }
+.bill-fly-4 { right: 22%; top: 18%; animation-delay: 1.2s; font-size: 18px; }
+.bill-fly-5 { left: 8%; top: 55%; animation-delay: 1.5s; font-size: 24px; }
+.bill-fly-6 { right: 10%; top: 58%; animation-delay: 1.9s; font-size: 25px; }
+
+@keyframes floatMoneyBill {
+  0% {
+    transform: translateY(20px) rotate(-15deg) scale(0.6);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.85;
+  }
+  70% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-60px) rotate(15deg) scale(1.1);
+    opacity: 0;
+  }
+}
+
+/* Escenario central de Snoopy */
+.snoopy-img-stage {
+  position: relative;
+  width: 190px;
+  height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.snoopy-halo-ring {
+  position: absolute;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.16) 0%, rgba(255, 255, 255, 0) 70%);
+  border: 2px dashed rgba(16, 185, 129, 0.35);
+  animation: rotateHalo 12s infinite linear;
+}
+
+@keyframes rotateHalo {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.snoopy-money-character {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  filter: drop-shadow(0 6px 12px rgba(16, 185, 129, 0.15));
+  animation: snoopyCountingBob 1.4s infinite ease-in-out;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+@keyframes snoopyCountingBob {
+  0%, 100% {
+    transform: translateY(0) rotate(-2deg) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) rotate(2deg) scale(1.03);
+  }
+}
+
+.snoopy-loader-header {
+  margin-bottom: 14px;
+}
+
+.loader-eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--emerald-dark);
+  margin-bottom: 2px;
+}
+
+.loader-app-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0;
+}
+
+/* Caja de conteo interactivo */
+.loader-counter-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: rgba(240, 253, 244, 0.9);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 8px 20px;
+  border-radius: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
+}
+
+.counter-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #047857;
+}
+
+.counter-amount {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #065f46;
+  letter-spacing: -0.01em;
+}
+
+/* Barra de progreso de carga */
+.loader-progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(226, 232, 240, 0.8);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.loader-progress-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #34d399 50%, #059669 100%);
+  border-radius: 999px;
+  animation: progressFillShimmer 1.8s infinite ease-in-out;
+}
+
+@keyframes progressFillShimmer {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(0%); }
+  100% { transform: translateX(100%); }
+}
+
+.loader-caption-text {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0;
+  min-height: 18px;
+  transition: all 0.3s ease;
+}
+
+.footer-brand-hint {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0;
+  text-align: center;
+  font-weight: 500;
+  opacity: 0.75;
+}
 `;
