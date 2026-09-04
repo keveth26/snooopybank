@@ -2173,111 +2173,9 @@ export default function App() {
                 </div>
               )}
 
-              {/* ========================================================
-                  GRÁFICA DONUT DE DISTRIBUCIÓN (PRIMERO PARA REVISIÓN RÁPIDA)
-                  ======================================================== */}
-              <div className="chart-section glass-inner-panel chart-section-hero">
-                <div className="chart-header">
-                  <div>
-                    <div className="flex-align-center gap-6">
-                      <span className="badge-pulse-dot" />
-                      <h3>Distribución Económica Global</h3>
-                    </div>
-                    <p className="sub-hint">Fijos, abono a deudas, ahorro para la alcancía y dinero libre para ocio.</p>
-                  </div>
-                  <div className="scope-switcher">
-                    <button
-                      className={"glass-pill-sm " + (viewChartScope === "quincena" ? "active" : "")}
-                      onClick={() => setViewChartScope("quincena")}
-                    >
-                      Esta Quincena
-                    </button>
-                    <button
-                      className={"glass-pill-sm " + (viewChartScope === "mes" ? "active" : "")}
-                      onClick={() => setViewChartScope("mes")}
-                    >
-                      Proyección Mes
-                    </button>
-                  </div>
-                </div>
-
-                <EconomyDonutChart
-                  gastos={viewChartScope === "quincena" ? calculations.chartCurrent.gastos : calculations.chartMonth.gastos}
-                  deudas={viewChartScope === "quincena" ? calculations.chartCurrent.deudas : calculations.chartMonth.deudas}
-                  ahorros={viewChartScope === "quincena" ? calculations.chartCurrent.ahorros : calculations.chartMonth.ahorros}
-                  libre={viewChartScope === "quincena" ? calculations.chartCurrent.libre : calculations.chartMonth.libre}
-                  totalTitle={viewChartScope === "quincena" ? "Total quincena" : "Total mensual"}
-                />
-              </div>
-
-              {/* Selector de Modo de Vista Personal / Familiar en Home */}
-              <div className="home-persona-filter-card glass-inner-panel">
-                <div className="hpf-header">
-                  <div className="hpf-title-group">
-                    <span className="hpf-label">Filtrar vista en Quincena:</span>
-                    <strong className="hpf-selected-tag">
-                      {filtroPersonaHome === "ambos"
-                        ? "Economía familiar (Ambos)"
-                        : filtroPersonaHome === "david"
-                        ? "Solo pagos de David"
-                        : "Solo pagos de Eveth"}
-                    </strong>
-                  </div>
-                  <div className="hpf-segmented">
-                    <button
-                      type="button"
-                      className={"hpf-btn " + (filtroPersonaHome === "ambos" ? "active" : "")}
-                      onClick={() => setFiltroPersonaHome("ambos")}
-                    >
-                      <Users size={16} />
-                      <span>Ambos (Todo)</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={"hpf-btn " + (filtroPersonaHome === "david" ? "active" : "")}
-                      onClick={() => setFiltroPersonaHome("david")}
-                    >
-                      <User size={16} />
-                      <span>David</span>
-                      <span className="hpf-badge">{fmt(calculations.davidStats.totalAsignado)}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={"hpf-btn " + (filtroPersonaHome === "eveth" ? "active" : "")}
-                      onClick={() => setFiltroPersonaHome("eveth")}
-                    >
-                      <User size={16} />
-                      <span>Eveth</span>
-                      <span className="hpf-badge">{fmt(calculations.evethStats.totalAsignado)}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {filtroPersonaHome !== "ambos" && (
-                  <div className="hpf-status-banner animate-fade-in">
-                    <span className="hpf-banner-text">
-                      👤 Mostrando únicamente los gastos y abonos que debe pagar{" "}
-                      <strong>{filtroPersonaHome === "david" ? "David" : "Eveth"}</strong> en esta quincena (Total:{" "}
-                      {fmt(
-                        filtroPersonaHome === "david"
-                          ? calculations.davidStats.totalAsignado
-                          : calculations.evethStats.totalAsignado
-                      )}
-                      ).
-                    </span>
-                    <button
-                      type="button"
-                      className="hpf-reset-btn"
-                      onClick={() => setFiltroPersonaHome("ambos")}
-                    >
-                      Ver ambos
-                    </button>
-                  </div>
-                )}
-              </div>
-
+              {/* Alerta de Gastos Imprevistos (si aplican) */}
               {calculations.gastosImprevistosTotal > 0 && (
-                <div className="imprevisto-banner">
+                <div className="imprevisto-banner animate-fade-in">
                   <AlertTriangle size={18} className="warn-icon" />
                   <div>
                     <strong>Atención: {fmt(calculations.gastosImprevistosTotal)} en gastos imprevistos este período.</strong>
@@ -2304,277 +2202,181 @@ export default function App() {
                 </div>
               )}
 
-              {/* Balances en Cuenta */}
-              <div className="balances-row">
-                <div className={"balance-box " + (filtroPersonaHome === "eveth" ? "focused-balance-box" : filtroPersonaHome === "david" ? "muted-balance-box" : "")}>
-                  <div className="b-header">
-                    <strong>Eveth</strong>
-                    <span className="b-sueldo">
-                      Sueldo base: {fmt(calculations.evethStats.ingresoBase)}
-                      {calculations.evethStats.extras > 0 && (
-                        <span className="extra-note"> (+{fmt(calculations.evethStats.extras)} extra)</span>
-                      )}
-                    </span>
+              {/* ========================================================
+                  PANEL SUPERIOR EN 2 COLUMNAS (OVERVIEW EJECUTIVO)
+                  Col 1: Gráfica Donut de Distribución
+                  Col 2: Filtro de Persona + Balances en Cuenta Eveth y David
+                  ======================================================== */}
+              <div className="home-top-overview-grid">
+                {/* Columna Izquierda: Gráfica Donut */}
+                <div className="chart-section glass-inner-panel chart-section-hero">
+                  <div className="chart-header">
+                    <div>
+                      <div className="flex-align-center gap-6">
+                        <span className="badge-pulse-dot" />
+                        <h3>Distribución Global</h3>
+                      </div>
+                      <p className="sub-hint">Fijos, abono a deudas, ahorro y libre.</p>
+                    </div>
+                    <div className="scope-switcher">
+                      <button
+                        className={"glass-pill-sm " + (viewChartScope === "quincena" ? "active" : "")}
+                        onClick={() => setViewChartScope("quincena")}
+                      >
+                        Esta Quincena
+                      </button>
+                      <button
+                        className={"glass-pill-sm " + (viewChartScope === "mes" ? "active" : "")}
+                        onClick={() => setViewChartScope("mes")}
+                      >
+                        Proyección Mes
+                      </button>
+                    </div>
                   </div>
-                  <div className="b-main">
-                    <span className="b-label">Debería tener en cuenta:</span>
-                    <strong className="b-amount">{fmt(calculations.evethStats.saldoEnCuenta)}</strong>
-                  </div>
-                  <div className="b-footer">
-                    <span>Comprometido: {fmt(calculations.evethStats.totalAsignado)}</span>
-                    <span>Pagó: {fmt(calculations.evethStats.totalPagado)}</span>
-                    {calculations.evethStats.restanteSueldo === 0 ? (
-                      <span className="safe-badge balanced-badge">⚖️ Equilibrio exacto ($0)</span>
-                    ) : calculations.evethStats.excede ? (
-                      <span className="warn-badge">Supera sueldo por {fmt(Math.abs(calculations.evethStats.restanteSueldo))}</span>
-                    ) : (
-                      <span className="safe-badge">Libre: +{fmt(calculations.evethStats.restanteSueldo)}</span>
-                    )}
-                  </div>
+
+                  <EconomyDonutChart
+                    gastos={viewChartScope === "quincena" ? calculations.chartCurrent.gastos : calculations.chartMonth.gastos}
+                    deudas={viewChartScope === "quincena" ? calculations.chartCurrent.deudas : calculations.chartMonth.deudas}
+                    ahorros={viewChartScope === "quincena" ? calculations.chartCurrent.ahorros : calculations.chartMonth.ahorros}
+                    libre={viewChartScope === "quincena" ? calculations.chartCurrent.libre : calculations.chartMonth.libre}
+                    totalTitle={viewChartScope === "quincena" ? "Total quincena" : "Total mensual"}
+                    size={146}
+                  />
                 </div>
 
-                <div className={"balance-box " + (filtroPersonaHome === "david" ? "focused-balance-box" : filtroPersonaHome === "eveth" ? "muted-balance-box" : "")}>
-                  <div className="b-header">
-                    <strong>David</strong>
-                    <span className="b-sueldo">
-                      Sueldo base: {fmt(calculations.davidStats.ingresoBase)}
-                      {calculations.davidStats.extras > 0 && (
-                        <span className="extra-note"> (+{fmt(calculations.davidStats.extras)} extra)</span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="b-main">
-                    <span className="b-label">Debería tener en cuenta:</span>
-                    <strong className="b-amount">{fmt(calculations.davidStats.saldoEnCuenta)}</strong>
-                  </div>
-                  <div className="b-footer">
-                    <span>Comprometido: {fmt(calculations.davidStats.totalAsignado)}</span>
-                    <span>Pagó: {fmt(calculations.davidStats.totalPagado)}</span>
-                    {calculations.davidStats.restanteSueldo === 0 ? (
-                      <span className="safe-badge balanced-badge">⚖️ Equilibrio exacto ($0)</span>
-                    ) : calculations.davidStats.excede ? (
-                      <span className="warn-badge">Supera sueldo por {fmt(Math.abs(calculations.davidStats.restanteSueldo))}</span>
-                    ) : (
-                      <span className="safe-badge">Libre: +{fmt(calculations.davidStats.restanteSueldo)}</span>
+                {/* Columna Derecha: Filtro de Persona y Balances en Cuenta */}
+                <div className="top-overview-right-col">
+                  {/* Selector de Modo de Vista Personal / Familiar */}
+                  <div className="home-persona-filter-card glass-inner-panel">
+                    <div className="hpf-header">
+                      <div className="hpf-title-group">
+                        <span className="hpf-label">Filtrar vista en Quincena:</span>
+                        <strong className="hpf-selected-tag">
+                          {filtroPersonaHome === "ambos"
+                            ? "Economía familiar (Ambos)"
+                            : filtroPersonaHome === "david"
+                            ? "Solo pagos de David"
+                            : "Solo pagos de Eveth"}
+                        </strong>
+                      </div>
+                      <div className="hpf-segmented">
+                        <button
+                          type="button"
+                          className={"hpf-btn " + (filtroPersonaHome === "ambos" ? "active" : "")}
+                          onClick={() => setFiltroPersonaHome("ambos")}
+                        >
+                          <Users size={15} />
+                          <span>Ambos</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={"hpf-btn " + (filtroPersonaHome === "david" ? "active" : "")}
+                          onClick={() => setFiltroPersonaHome("david")}
+                        >
+                          <User size={15} />
+                          <span>David</span>
+                          <span className="hpf-badge">{fmt(calculations.davidStats.totalAsignado)}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={"hpf-btn " + (filtroPersonaHome === "eveth" ? "active" : "")}
+                          onClick={() => setFiltroPersonaHome("eveth")}
+                        >
+                          <User size={15} />
+                          <span>Eveth</span>
+                          <span className="hpf-badge">{fmt(calculations.evethStats.totalAsignado)}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {filtroPersonaHome !== "ambos" && (
+                      <div className="hpf-status-banner animate-fade-in">
+                        <span className="hpf-banner-text">
+                          👤 Pagos asignados a <strong>{filtroPersonaHome === "david" ? "David" : "Eveth"}</strong>:{" "}
+                          {fmt(
+                            filtroPersonaHome === "david"
+                              ? calculations.davidStats.totalAsignado
+                              : calculations.evethStats.totalAsignado
+                          )}
+                        </span>
+                        <button
+                          type="button"
+                          className="hpf-reset-btn"
+                          onClick={() => setFiltroPersonaHome("ambos")}
+                        >
+                          Ver ambos
+                        </button>
+                      </div>
                     )}
+                  </div>
+
+                  {/* Balances en Cuenta: 2 columnas internas lado a lado */}
+                  <div className="balances-row">
+                    <div className={"balance-box " + (filtroPersonaHome === "eveth" ? "focused-balance-box" : filtroPersonaHome === "david" ? "muted-balance-box" : "")}>
+                      <div className="b-header">
+                        <strong>Eveth</strong>
+                        <span className="b-sueldo">
+                          Base: {fmt(calculations.evethStats.ingresoBase)}
+                          {calculations.evethStats.extras > 0 && (
+                            <span className="extra-note"> (+{fmt(calculations.evethStats.extras)})</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="b-main">
+                        <span className="b-label">Debería tener en cuenta:</span>
+                        <strong className="b-amount">{fmt(calculations.evethStats.saldoEnCuenta)}</strong>
+                      </div>
+                      <div className="b-footer">
+                        <span>Comprometido: {fmt(calculations.evethStats.totalAsignado)}</span>
+                        <span>Pagó: {fmt(calculations.evethStats.totalPagado)}</span>
+                        {calculations.evethStats.restanteSueldo === 0 ? (
+                          <span className="safe-badge balanced-badge">⚖️ $0</span>
+                        ) : calculations.evethStats.excede ? (
+                          <span className="warn-badge">Supera: {fmt(Math.abs(calculations.evethStats.restanteSueldo))}</span>
+                        ) : (
+                          <span className="safe-badge">Libre: +{fmt(calculations.evethStats.restanteSueldo)}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className={"balance-box " + (filtroPersonaHome === "david" ? "focused-balance-box" : filtroPersonaHome === "eveth" ? "muted-balance-box" : "")}>
+                      <div className="b-header">
+                        <strong>David</strong>
+                        <span className="b-sueldo">
+                          Base: {fmt(calculations.davidStats.ingresoBase)}
+                          {calculations.davidStats.extras > 0 && (
+                            <span className="extra-note"> (+{fmt(calculations.davidStats.extras)})</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="b-main">
+                        <span className="b-label">Debería tener en cuenta:</span>
+                        <strong className="b-amount">{fmt(calculations.davidStats.saldoEnCuenta)}</strong>
+                      </div>
+                      <div className="b-footer">
+                        <span>Comprometido: {fmt(calculations.davidStats.totalAsignado)}</span>
+                        <span>Pagó: {fmt(calculations.davidStats.totalPagado)}</span>
+                        {calculations.davidStats.restanteSueldo === 0 ? (
+                          <span className="safe-badge balanced-badge">⚖️ $0</span>
+                        ) : calculations.davidStats.excede ? (
+                          <span className="warn-badge">Supera: {fmt(Math.abs(calculations.davidStats.restanteSueldo))}</span>
+                        ) : (
+                          <span className="safe-badge">Libre: +{fmt(calculations.davidStats.restanteSueldo)}</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Ingresos Extras Desplegable */}
-              <div className="extra-incomes-section glass-inner-panel">
-                <div className="section-title-flex">
-                  <div>
-                    <div className="flex-align-center gap-6">
-                      <h3>Ingresos extras</h3>
-                      {(active.ingresosExtras || []).length > 0 && (
-                        <span className="count-pill-emerald">{(active.ingresosExtras || []).length}</span>
-                      )}
-                    </div>
-                    <p className="sub-hint">Primas, bonos o freelance con destino a pagar deudas o apartar para la alcancía.</p>
-                  </div>
-                  {!showExtraForm && (
-                    <button
-                      type="button"
-                      className="modern-btn-pill-accent"
-                      onClick={() => setShowExtraForm(true)}
-                    >
-                      <Plus size={14} />
-                      <span>Agregar ingreso extra</span>
-                    </button>
-                  )}
-                </div>
-
-                <div className="extra-incomes-list">
-                  {filteredExtras.length === 0 && !showExtraForm && (
-                    <div className="empty-extras-placeholder">
-                      <Sparkles size={16} className="empty-extras-icon" />
-                      <p className="empty-hint">
-                        No hay ingresos extras registrados {filtroPersonaHome !== "ambos" ? `para ${filtroPersonaHome === "david" ? "David" : "Eveth"}` : "en esta quincena"}.
-                      </p>
-                    </div>
-                  )}
-
-                  {filteredExtras.map((e) => (
-                    <div className={"extra-item-card animate-fade-in " + (e.persona === "eveth" ? "extra-card-eveth" : "extra-card-david")} key={e.id}>
-                      <div className="extra-left-content">
-                        <div className={"extra-avatar-icon " + (e.persona === "eveth" ? "avatar-eveth" : "avatar-david")}>
-                          {e.persona === "eveth" ? "E" : "D"}
-                        </div>
-                        <div className="extra-info-col">
-                          <span className="extra-concept-title">{e.concepto}</span>
-                          <div className="extra-badges-row">
-                            <span className={"extra-person-pill " + (e.persona === "eveth" ? "pill-eveth" : "pill-david")}>
-                              {e.persona === "eveth" ? "Eveth" : "David"}
-                            </span>
-                            <span className={"extra-dest-badge " + (e.destino === "deudas" ? "dest-debt" : "dest-save")}>
-                              {e.destino === "deudas" ? (
-                                <>
-                                  <CreditCard size={11} />
-                                  <span>Pagar deudas</span>
-                                </>
-                              ) : (
-                                <>
-                                  <PiggyBank size={11} />
-                                  <span>Ahorro</span>
-                                </>
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="extra-right-content">
-                        <div className="extra-amount-wrap">
-                          <span className="extra-amount-label">Ingreso extra</span>
-                          <strong className="extra-amount-value">+{fmt(e.monto)}</strong>
-                        </div>
-                        <button
-                          type="button"
-                          className="extra-delete-btn"
-                          onClick={() => removeExtraIncome(e.id)}
-                          title="Eliminar ingreso extra"
-                          aria-label="Eliminar ingreso"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Formulario Desplegable de Ingreso Extra */}
-                  {showExtraForm && (
-                    <div className="add-extra-form-collapsible animate-fade-in">
-                      <div className="aef-header">
-                        <span className="aef-title">Registrar nuevo ingreso extraordinario</span>
-                        <button
-                          type="button"
-                          className="aef-close-btn"
-                          onClick={() => setShowExtraForm(false)}
-                          title="Cerrar formulario"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-
-                      <div className="aef-inputs-grid">
-                        <div className="aef-input-group">
-                          <label>Concepto:</label>
-                          <input
-                            type="text"
-                            className="glass-input"
-                            placeholder="Ej. Bono de desempeño, Freelance, Prima"
-                            value={newExtra.concepto}
-                            onChange={(ev) => setNewExtra({ ...newExtra, concepto: ev.target.value })}
-                          />
-                        </div>
-
-                        <div className="aef-input-group">
-                          <label>Quién lo recibe:</label>
-                          <SegmentedPersonBadge
-                            value={newExtra.persona}
-                            onChange={(p) => setNewExtra({ ...newExtra, persona: p })}
-                          />
-                        </div>
-
-                        <div className="aef-input-group">
-                          <label>Destino del dinero:</label>
-                          <div className="dest-switcher">
-                            <button
-                              type="button"
-                              className={"dest-opt " + (newExtra.destino === "deudas" ? "active-debt" : "")}
-                              onClick={() => setNewExtra({ ...newExtra, destino: "deudas" })}
-                            >
-                              Pagar deudas
-                            </button>
-                            <button
-                              type="button"
-                              className={"dest-opt " + (newExtra.destino === "ahorro" ? "active-save" : "")}
-                              onClick={() => setNewExtra({ ...newExtra, destino: "ahorro" })}
-                            >
-                              Ahorro
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="aef-input-group">
-                          <label>Monto ($):</label>
-                          <input
-                            type="number"
-                            className="glass-input-sm text-right font-bold-input"
-                            placeholder="$ 0"
-                            value={newExtra.monto}
-                            onChange={(ev) => setNewExtra({ ...newExtra, monto: ev.target.value })}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="aef-actions-row">
-                        <button
-                          type="button"
-                          className="modern-btn-cancel"
-                          onClick={() => setShowExtraForm(false)}
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          className="modern-btn-primary"
-                          onClick={() => {
-                            addExtraIncome();
-                            setShowExtraForm(false);
-                          }}
-                        >
-                          <Plus size={14} />
-                          <span>Guardar ingreso extra</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 2 Columnas */}
+              {/* ========================================================
+                  DISTRIBUCIÓN EN 2 COLUMNAS PRINCIPALES (DESKTOP)
+                  Columna 1: Gastos a Pagar (Checklist y Control de Pagos)
+                  Columna 2: Ingresos del período (Fijos + Extras), Ahorro/Libre y Abonos a Deudas
+                  ======================================================== */}
               <div className="two-columns-layout">
-                {/* Columna Izquierda */}
+                {/* Columna Izquierda: Gastos a Pagar */}
                 <div className="col-stack">
-                  <div className="glass-inner-panel">
-                    <h3>Ingresos fijos quincenales</h3>
-                    <div className="glass-item-row">
-                      <span>Sueldo David</span>
-                      <input
-                        type="number"
-                        className="glass-input-sm text-right"
-                        value={active.ingresos.david}
-                        onChange={(e) =>
-                          setActive({
-                            ...active,
-                            ingresos: { ...active.ingresos, david: Number(e.target.value) },
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="glass-item-row">
-                      <span>Sueldo Eveth</span>
-                      <input
-                        type="number"
-                        className="glass-input-sm text-right"
-                        value={active.ingresos.eveth}
-                        onChange={(e) =>
-                          setActive({
-                            ...active,
-                            ingresos: { ...active.ingresos, eveth: Number(e.target.value) },
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="glass-item-row row-total">
-                      <span>Total base pareja</span>
-                      <strong>{fmt(calculations.ingresosBaseTotal)}</strong>
-                    </div>
-                  </div>
-
-                  {/* Gastos Fijos e Imprevistos */}
                   <div className="glass-inner-panel">
                     <div className="section-title-flex">
                       <div>
@@ -2828,13 +2630,223 @@ export default function App() {
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Apartados: Ahorro Programado vs Dinero Libre SEPARADOS */}
-                  <div className="glass-inner-panel">
-                    <h3>
-                      Ahorro y Dinero Libre
-                      {filtroPersonaHome !== "ambos" ? ` (${filtroPersonaHome === "david" ? "David" : "Eveth"})` : " (Separados)"}
-                    </h3>
+                {/* Columna Derecha: Ingresos, Ahorros y Abonos a Deudas */}
+                <div className="col-stack">
+                  {/* 1. Ingresos del período (Fijos + Extras en 2 columnas internas) */}
+                  <div className="glass-inner-panel ingresos-combined-panel">
+                    <div className="ingresos-two-col-grid">
+                      {/* Subcolumna A: Ingresos fijos */}
+                      <div className="ingresos-subcol">
+                        <div className="section-title-flex">
+                          <div>
+                            <h3>Ingresos fijos</h3>
+                            <p className="sub-hint">Sueldos presupuestados</p>
+                          </div>
+                        </div>
+                        <div className="glass-item-row">
+                          <span>Sueldo David</span>
+                          <input
+                            type="number"
+                            className="glass-input-sm text-right"
+                            value={active.ingresos.david}
+                            onChange={(e) =>
+                              setActive({
+                                ...active,
+                                ingresos: { ...active.ingresos, david: Number(e.target.value) },
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="glass-item-row">
+                          <span>Sueldo Eveth</span>
+                          <input
+                            type="number"
+                            className="glass-input-sm text-right"
+                            value={active.ingresos.eveth}
+                            onChange={(e) =>
+                              setActive({
+                                ...active,
+                                ingresos: { ...active.ingresos, eveth: Number(e.target.value) },
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="glass-item-row row-total">
+                          <span>Total base</span>
+                          <strong>{fmt(calculations.ingresosBaseTotal)}</strong>
+                        </div>
+                      </div>
+
+                      {/* Subcolumna B: Ingresos extras */}
+                      <div className="ingresos-subcol">
+                        <div className="section-title-flex">
+                          <div>
+                            <div className="flex-align-center gap-6">
+                              <h3>Ingresos extras</h3>
+                              {(active.ingresosExtras || []).length > 0 && (
+                                <span className="count-pill-emerald">{(active.ingresosExtras || []).length}</span>
+                              )}
+                            </div>
+                            <p className="sub-hint">Primas, bonos o freelance</p>
+                          </div>
+                          {!showExtraForm && (
+                            <button
+                              type="button"
+                              className="modern-btn-pill-accent"
+                              onClick={() => setShowExtraForm(true)}
+                              title="Agregar nuevo ingreso extra"
+                            >
+                              <Plus size={13} />
+                              <span>Agregar</span>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="extra-incomes-list-compact">
+                          {filteredExtras.length === 0 && !showExtraForm && (
+                            <div className="empty-extras-placeholder-compact">
+                              <Sparkles size={14} className="empty-extras-icon" />
+                              <span className="empty-hint-compact">
+                                Sin extras {filtroPersonaHome !== "ambos" ? `de ${filtroPersonaHome === "david" ? "David" : "Eveth"}` : "registrados"}
+                              </span>
+                            </div>
+                          )}
+
+                          {filteredExtras.map((e) => (
+                            <div className={"extra-item-card extra-item-compact animate-fade-in " + (e.persona === "eveth" ? "extra-card-eveth" : "extra-card-david")} key={e.id}>
+                              <div className="extra-left-content">
+                                <div className={"extra-avatar-icon-sm " + (e.persona === "eveth" ? "avatar-eveth" : "avatar-david")}>
+                                  {e.persona === "eveth" ? "E" : "D"}
+                                </div>
+                                <div className="extra-info-col">
+                                  <span className="extra-concept-title">{e.concepto}</span>
+                                  <span className={"extra-dest-badge " + (e.destino === "deudas" ? "dest-debt" : "dest-save")}>
+                                    {e.destino === "deudas" ? "Deudas" : "Ahorro"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="extra-right-content">
+                                <strong className="extra-amount-value">+{fmt(e.monto)}</strong>
+                                <button
+                                  type="button"
+                                  className="extra-delete-btn"
+                                  onClick={() => removeExtraIncome(e.id)}
+                                  title="Eliminar ingreso extra"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Formulario Desplegable de Ingreso Extra */}
+                          {showExtraForm && (
+                            <div className="add-extra-form-collapsible animate-fade-in" style={{ padding: "10px", marginTop: "6px" }}>
+                              <div className="aef-header">
+                                <span className="aef-title">Nuevo ingreso extra</span>
+                                <button
+                                  type="button"
+                                  className="aef-close-btn"
+                                  onClick={() => setShowExtraForm(false)}
+                                  title="Cerrar"
+                                >
+                                  <X size={13} />
+                                </button>
+                              </div>
+
+                              <div className="aef-inputs-grid" style={{ gridTemplateColumns: "1fr", gap: "8px" }}>
+                                <div className="aef-input-group">
+                                  <label>Concepto:</label>
+                                  <input
+                                    type="text"
+                                    className="glass-input-sm"
+                                    placeholder="Ej. Bono, Freelance"
+                                    value={newExtra.concepto}
+                                    onChange={(ev) => setNewExtra({ ...newExtra, concepto: ev.target.value })}
+                                  />
+                                </div>
+
+                                <div className="aef-input-group">
+                                  <label>Quién lo recibe:</label>
+                                  <SegmentedPersonBadge
+                                    value={newExtra.persona}
+                                    onChange={(p) => setNewExtra({ ...newExtra, persona: p })}
+                                  />
+                                </div>
+
+                                <div className="aef-input-group">
+                                  <label>Destino:</label>
+                                  <div className="dest-switcher">
+                                    <button
+                                      type="button"
+                                      className={"dest-opt " + (newExtra.destino === "deudas" ? "active-debt" : "")}
+                                      onClick={() => setNewExtra({ ...newExtra, destino: "deudas" })}
+                                    >
+                                      Deudas
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={"dest-opt " + (newExtra.destino === "ahorro" ? "active-save" : "")}
+                                      onClick={() => setNewExtra({ ...newExtra, destino: "ahorro" })}
+                                    >
+                                      Ahorro
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="aef-input-group">
+                                  <label>Monto ($):</label>
+                                  <input
+                                    type="number"
+                                    className="glass-input-sm text-right font-bold-input"
+                                    placeholder="$ 0"
+                                    value={newExtra.monto}
+                                    onChange={(ev) => setNewExtra({ ...newExtra, monto: ev.target.value })}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="aef-actions-row" style={{ marginTop: "8px" }}>
+                                <button
+                                  type="button"
+                                  className="modern-btn-cancel"
+                                  onClick={() => setShowExtraForm(false)}
+                                >
+                                  Cancelar
+                                </button>
+                                <button
+                                  type="button"
+                                  className="modern-btn-primary"
+                                  onClick={() => {
+                                    addExtraIncome();
+                                    setShowExtraForm(false);
+                                  }}
+                                >
+                                  <Plus size={13} />
+                                  <span>Guardar</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Apartados: Ahorro Programado vs Dinero Libre en 2 Columnas internas */}
+                  <div className="glass-inner-panel ahorro-libre-combined-panel">
+                    <div className="section-title-flex">
+                      <div>
+                        <h3>
+                          Ahorro y Dinero Libre
+                          {filtroPersonaHome !== "ambos" ? ` (${filtroPersonaHome === "david" ? "David" : "Eveth"})` : ""}
+                        </h3>
+                        <p className="sub-hint">Separación para la alcancía y bolsillo personal</p>
+                      </div>
+                    </div>
 
                     {(() => {
                       const ahorroAsignado = !active.ahorroProgramado?.pagado
@@ -2857,7 +2869,7 @@ export default function App() {
                       }
 
                       return (
-                        <>
+                        <div className="ahorro-libre-grid">
                           {/* Ahorro Programado (Entra a la alcancía) */}
                           {showAhorro && (
                             filtroPersonaHome !== "ambos" ? (
@@ -2870,11 +2882,10 @@ export default function App() {
                                   {active.ahorroProgramado?.pagado && <Check size={13} strokeWidth={3} />}
                                 </button>
                                 <div className="concept-title">
-                                  <span className="concept-text">Ahorro para la alcancía</span>
-                                  <span className="badge-tag-ahorro">🏦 Se guarda al cerrar</span>
+                                  <span className="concept-text">Ahorro alcancía</span>
+                                  <span className="badge-tag-ahorro">🏦 Cierre</span>
                                 </div>
                                 <div className="single-debt-amount-pill save-pill-border">
-                                  <span className="single-debt-label">Debes apartar:</span>
                                   <strong className="single-debt-value">{fmt(active.ahorroProgramado?.monto || 0)}</strong>
                                 </div>
                               </div>
@@ -2887,8 +2898,8 @@ export default function App() {
                                   {active.ahorroProgramado?.pagado && <Check size={13} strokeWidth={3} />}
                                 </button>
                                 <div className="concept-title">
-                                  <span className="concept-text">Ahorro para la alcancía</span>
-                                  <span className="badge-tag-ahorro">🏦 Se guarda al cerrar</span>
+                                  <span className="concept-text">Ahorro alcancía</span>
+                                  <span className="badge-tag-ahorro">🏦 Cierre</span>
                                 </div>
                                 <SegmentedPersonBadge
                                   value={
@@ -2906,6 +2917,7 @@ export default function App() {
                                 <input
                                   type="number"
                                   className="glass-input-sm text-right"
+                                  style={{ maxWidth: "80px" }}
                                   value={active.ahorroProgramado?.monto || 0}
                                   onChange={(e) =>
                                     setActive({
@@ -2930,11 +2942,10 @@ export default function App() {
                                   {active.dineroLibre?.pagado && <Check size={13} strokeWidth={3} />}
                                 </button>
                                 <div className="concept-title">
-                                  <span className="concept-text">Dinero libre / bolsillo</span>
-                                  <span className="badge-tag-libre">☕ Gustos sin culpa</span>
+                                  <span className="concept-text">Dinero libre</span>
+                                  <span className="badge-tag-libre">☕ Bolsillo</span>
                                 </div>
                                 <div className="single-debt-amount-pill libre-pill-border">
-                                  <span className="single-debt-label">Tu dinero libre:</span>
                                   <strong className="single-debt-value">{fmt(active.dineroLibre?.monto || 0)}</strong>
                                 </div>
                               </div>
@@ -2947,8 +2958,8 @@ export default function App() {
                                   {active.dineroLibre?.pagado && <Check size={13} strokeWidth={3} />}
                                 </button>
                                 <div className="concept-title">
-                                  <span className="concept-text">Dinero libre / bolsillo</span>
-                                  <span className="badge-tag-libre">☕ Gustos sin culpa</span>
+                                  <span className="concept-text">Dinero libre</span>
+                                  <span className="badge-tag-libre">☕ Bolsillo</span>
                                 </div>
                                 <SegmentedPersonBadge
                                   value={
@@ -2966,6 +2977,7 @@ export default function App() {
                                 <input
                                   type="number"
                                   className="glass-input-sm text-right"
+                                  style={{ maxWidth: "80px" }}
                                   value={active.dineroLibre?.monto || 0}
                                   onChange={(e) =>
                                     setActive({
@@ -2977,14 +2989,12 @@ export default function App() {
                               </div>
                             )
                           )}
-                        </>
+                        </div>
                       );
                     })()}
                   </div>
-                </div>
 
-                {/* Columna Derecha: Abonos a Deudas Focalizado */}
-                <div className="col-stack">
+                  {/* 3. Columna Derecha: Abonos a Deudas Focalizado */}
                   <div className="glass-inner-panel highlight-panel">
                     <div className="disp-highlight-bar">
                       <div>
@@ -3519,50 +3529,55 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Aporte manual */}
-              <div className="glass-inner-panel">
-                <h3>Registrar aporte voluntario a la alcancía</h3>
-                <div className="add-savings-form">
-                  <input
-                    type="text"
-                    className="glass-input"
-                    placeholder="Concepto (ej. Cajita Nu, Venta, Rendimientos)"
-                    value={newManualSavings.concepto}
-                    onChange={(e) => setNewManualSavings({ ...newManualSavings, concepto: e.target.value })}
-                  />
-                  <input
-                    type="number"
-                    className="glass-input-sm text-right"
-                    placeholder="Monto ($)"
-                    value={newManualSavings.monto}
-                    onChange={(e) => setNewManualSavings({ ...newManualSavings, monto: e.target.value })}
-                  />
-                  <button className="modern-btn-primary btn-blue" onClick={addManualSaving}>
-                    <Plus size={14} />
-                    <span>Guardar en alcancía</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Historial de aportes */}
-              <div className="glass-inner-panel">
-                <h3>Historial de aportes al ahorro</h3>
-                {(savings.registros || []).length === 0 ? (
-                  <p className="empty-hint">Aún no hay aportes registrados en la alcancía.</p>
-                ) : (
-                  <div className="savings-history-list">
-                    {savings.registros.map((r) => (
-                      <div className="savings-row-item" key={r.id}>
-                        <div className="sr-info">
-                          <span className="sr-tag">Fondo Familiar</span>
-                          <span className="sr-concept">{r.concepto}</span>
-                          <span className="sr-date">{r.fecha}</span>
-                        </div>
-                        <strong className="sr-amount">+{fmt(r.monto)}</strong>
-                      </div>
-                    ))}
+              {/* Aporte manual y Historial en 2 columnas en Desktop */}
+              <div className="ahorros-split-grid">
+                {/* Aporte manual */}
+                <div className="glass-inner-panel">
+                  <h3>Registrar aporte voluntario</h3>
+                  <p className="sub-hint" style={{ marginBottom: "12px" }}>Añade dinero extra directamente al fondo de la alcancía</p>
+                  <div className="add-savings-form">
+                    <input
+                      type="text"
+                      className="glass-input"
+                      placeholder="Concepto (ej. Cajita Nu, Venta, Rendimientos)"
+                      value={newManualSavings.concepto}
+                      onChange={(e) => setNewManualSavings({ ...newManualSavings, concepto: e.target.value })}
+                    />
+                    <input
+                      type="number"
+                      className="glass-input-sm text-right"
+                      placeholder="Monto ($)"
+                      value={newManualSavings.monto}
+                      onChange={(e) => setNewManualSavings({ ...newManualSavings, monto: e.target.value })}
+                    />
+                    <button className="modern-btn-primary btn-blue" onClick={addManualSaving}>
+                      <Plus size={14} />
+                      <span>Guardar en alcancía</span>
+                    </button>
                   </div>
-                )}
+                </div>
+
+                {/* Historial de aportes */}
+                <div className="glass-inner-panel">
+                  <h3>Historial de aportes</h3>
+                  <p className="sub-hint" style={{ marginBottom: "12px" }}>Aportes registrados recientemente</p>
+                  {(savings.registros || []).length === 0 ? (
+                    <p className="empty-hint">Aún no hay aportes registrados en la alcancía.</p>
+                  ) : (
+                    <div className="savings-history-list">
+                      {savings.registros.map((r) => (
+                        <div className="savings-row-item" key={r.id}>
+                          <div className="sr-info">
+                            <span className="sr-tag">Fondo Familiar</span>
+                            <span className="sr-concept">{r.concepto}</span>
+                            <span className="sr-date">{r.fecha}</span>
+                          </div>
+                          <strong className="sr-amount">+{fmt(r.monto)}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -4402,26 +4417,26 @@ body, html {
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
   border-radius: 20px;
-  padding: 24px;
-  margin-bottom: 24px;
+  padding: 18px 22px;
+  margin-bottom: 16px;
 }
 .glass-inner-panel {
   background: var(--glass-inner);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 16px;
-  padding: 18px;
-  margin-bottom: 16px;
+  padding: 13px 15px;
+  margin-bottom: 12px;
 }
 
 .card-topbar {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 20px;
-  padding-bottom: 18px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
   border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 .card-topbar-actions {
@@ -4891,82 +4906,124 @@ body, html {
 .imprevisto-banner p { margin: 3px 0 0; color: #7c2d12; font-size: 13px; }
 .warn-icon { color: #ea580c; flex-shrink: 0; }
 
+/* Dashboard Top Overview en 2 Columnas (Desktop) */
+.home-top-overview-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 14px;
+  margin-bottom: 12px;
+  align-items: stretch;
+}
+@media (max-width: 900px) {
+  .home-top-overview-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+.top-overview-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: space-between;
+}
+.top-overview-right-col .home-persona-filter-card {
+  margin-bottom: 0;
+  padding: 10px 14px;
+}
+.top-overview-right-col .hpf-header {
+  margin-bottom: 0;
+}
+.top-overview-right-col .hpf-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+.top-overview-right-col .hpf-selected-tag {
+  font-size: 14.5px;
+}
+
 /* Balances */
 .balances-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 18px;
-  margin-bottom: 24px;
+  gap: 10px;
+  margin-bottom: 0;
 }
-@media (max-width: 700px) { .balances-row { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .balances-row { grid-template-columns: 1fr; gap: 8px; } }
 .balance-box {
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.95);
-  border-radius: 18px;
-  padding: 16px 18px;
+  border-radius: 14px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+  gap: 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.02);
 }
 .b-header { display: flex; justify-content: space-between; align-items: baseline; }
-.b-header strong { font-family: 'Outfit', sans-serif; font-size: 20px; color: var(--text-dark); }
-.b-sueldo { font-size: 13px; color: var(--text-muted); }
-.b-main { display: flex; flex-direction: column; margin: 4px 0; }
-.b-label { font-size: 13px; color: var(--text-muted); }
-.b-amount { font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 700; color: var(--emerald-dark); }
+.b-header strong { font-family: 'Outfit', sans-serif; font-size: 16px; color: var(--text-dark); }
+.b-sueldo { font-size: 11.5px; color: var(--text-muted); }
+.b-main { display: flex; flex-direction: column; margin: 2px 0; }
+.b-label { font-size: 11.5px; color: var(--text-muted); }
+.b-amount { font-family: 'Outfit', sans-serif; font-size: 21px; font-weight: 700; color: var(--emerald-dark); }
 .b-footer {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 13px;
+  gap: 8px;
+  font-size: 11.5px;
   color: var(--text-muted);
   flex-wrap: wrap;
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px dashed rgba(226, 232, 240, 0.8);
 }
-.warn-badge { background: rgba(245, 158, 11, 0.15); color: var(--amber-dark); padding: 3px 9px; border-radius: 999px; font-weight: 600; font-size: 12.5px; }
-.safe-badge { background: rgba(16, 185, 129, 0.15); color: var(--emerald-dark); padding: 3px 9px; border-radius: 999px; font-weight: 600; font-size: 12.5px; }
+.warn-badge { background: rgba(245, 158, 11, 0.15); color: var(--amber-dark); padding: 2px 7px; border-radius: 999px; font-weight: 600; font-size: 11px; }
+.safe-badge { background: rgba(16, 185, 129, 0.15); color: var(--emerald-dark); padding: 2px 7px; border-radius: 999px; font-weight: 600; font-size: 11px; }
 
 /* Donut */
-.chart-section { padding: 20px; }
+.chart-section { padding: 12px 14px; }
+.chart-section-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-bottom: 0;
+  height: 100%;
+}
 .chart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
-.chart-header h3 { margin: 0; font-family: 'Outfit', sans-serif; font-size: 17px; }
-.sub-hint { margin: 2px 0 0; font-size: 12.5px; color: var(--text-muted); }
+.chart-header h3 { margin: 0; font-family: 'Outfit', sans-serif; font-size: 15px; }
+.sub-hint { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
 .scope-switcher { display: flex; gap: 4px; }
 .glass-pill-sm {
   background: rgba(255, 255, 255, 0.6);
   border: 1px solid rgba(203, 213, 225, 0.7);
-  font-size: 11.5px;
-  padding: 3px 10px;
+  font-size: 11px;
+  padding: 3px 9px;
   border-radius: 999px;
   color: var(--text-muted);
   cursor: pointer;
 }
 .glass-pill-sm.active { background: #0f172a; color: white; border-color: #0f172a; font-weight: 600; }
-.donut-wrap { display: flex; align-items: center; justify-content: space-around; gap: 24px; flex-wrap: wrap; }
+.donut-wrap { display: flex; align-items: center; justify-content: space-around; gap: 14px; flex-wrap: wrap; }
 .donut-svg-container { position: relative; display: flex; align-items: center; justify-content: center; }
 .donut-svg { transform: rotate(-90deg); border-radius: 50%; }
 .donut-center { position: absolute; display: flex; flex-direction: column; align-items: center; text-align: center; pointer-events: none; }
-.donut-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
-.donut-val { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: var(--text-dark); }
-.donut-legend { display: flex; flex-direction: column; gap: 8px; }
-.legend-item { display: flex; align-items: center; gap: 10px; }
-.dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.donut-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.donut-val { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-dark); }
+.donut-legend { display: flex; flex-direction: column; gap: 5px; }
+.legend-item { display: flex; align-items: center; gap: 8px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .dot-gastos { background: #10b981; }
 .dot-deudas { background: #f59e0b; }
 .dot-ahorros { background: #3b82f6; }
 .dot-libre { background: #8b5cf6; }
 .legend-info { display: flex; flex-direction: column; }
-.legend-name { font-size: 11.5px; color: var(--text-muted); }
-.legend-info strong { font-size: 13px; color: var(--text-dark); }
+.legend-name { font-size: 11px; color: var(--text-muted); }
+.legend-info strong { font-size: 12px; color: var(--text-dark); }
 
 /* Alcancía */
 .piggy-container { display: flex; flex-direction: column; align-items: center; gap: 8px; }
@@ -5775,17 +5832,124 @@ body, html {
 }
 
 /* 2 Columnas */
-.two-columns-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-@media (max-width: 820px) { .two-columns-layout { grid-template-columns: 1fr; } }
-.col-stack { display: flex; flex-direction: column; gap: 16px; }
+.two-columns-layout { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 14px; align-items: start; }
+@media (max-width: 860px) { .two-columns-layout { grid-template-columns: 1fr; gap: 12px; } }
+.col-stack { display: flex; flex-direction: column; gap: 12px; }
+
+/* Panel Combinado de Ingresos en 2 Columnas */
+.ingresos-two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 680px) {
+  .ingresos-two-col-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+.ingresos-subcol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.extra-incomes-list-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.empty-extras-placeholder-compact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(248, 250, 252, 0.6);
+  border: 1px dashed rgba(203, 213, 225, 0.7);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.empty-hint-compact {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.extra-item-compact {
+  padding: 7px 10px !important;
+  gap: 8px !important;
+  border-radius: 10px !important;
+}
+.extra-avatar-icon-sm {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 11.5px;
+  flex-shrink: 0;
+}
+
+/* Panel Combinado de Ahorro y Dinero Libre en 2 Columnas */
+.ahorro-libre-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+  align-items: stretch;
+}
+@media (max-width: 680px) {
+  .ahorro-libre-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+.ahorro-subcard {
+  padding: 8px 10px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Deudas Totales en 2 Columnas */
+.debts-cards-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+@media (max-width: 768px) {
+  .debts-cards-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Ahorros en 2 Columnas */
+.ahorros-split-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 820px) {
+  .ahorros-split-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
 
 .glass-item-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 0;
-  gap: 12px;
-  font-size: 14.5px;
+  padding: 7px 0;
+  gap: 8px;
+  font-size: 13.5px;
   border-bottom: 1px solid rgba(226, 232, 240, 0.6);
 }
 .glass-item-row.row-imprevisto {
