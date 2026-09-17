@@ -43,5 +43,12 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    proxy: {
+      '/api': {
+        target: 'https://snoopybank.pages.dev',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
 });

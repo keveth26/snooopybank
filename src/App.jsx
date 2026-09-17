@@ -542,6 +542,95 @@ function SegmentedAbonoBadge({ value = "ambos", onChange, title = "" }) {
   );
 }
 
+// Input numérico inteligente:
+// 1. Al hacer click/focus: si el valor es 0 o está vacío, queda completamente vacío para escribir directo.
+// 2. Si ya tiene un valor distinto de cero, auto-selecciona el texto para sobreescribir al teclear.
+// 3. Permite borrar todo libremente con Backspace sin forzar ceros indeseados ni perder el foco.
+// 4. Al perder el foco (blur), si quedó vacío se convierte en 0.
+function SmartNumericInput({
+  value,
+  onChange,
+  className = "",
+  placeholder = "0",
+  disabled = false,
+  autoSelect = true,
+  style,
+  ...props
+}) {
+  const [isFocused, setIsFocused] = useState(false);
+  const [localText, setLocalText] = useState(() => {
+    if (value === 0 || value === "0" || value === null || value === undefined || value === "") {
+      return "";
+    }
+    return String(value);
+  });
+
+  useEffect(() => {
+    if (!isFocused) {
+      if (value === 0 || value === "0" || value === null || value === undefined || value === "") {
+        setLocalText("");
+      } else {
+        setLocalText(String(value));
+      }
+    }
+  }, [value, isFocused]);
+
+  const handleFocus = (e) => {
+    setIsFocused(true);
+    if (value === 0 || value === "0" || localText === "0" || localText === "") {
+      setLocalText("");
+    } else if (autoSelect) {
+      setTimeout(() => {
+        try {
+          e.target?.select();
+        } catch {}
+      }, 10);
+    }
+    props.onFocus?.(e);
+  };
+
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    const cleanDigits = raw.replace(/[^0-9]/g, "");
+    setLocalText(cleanDigits);
+    const num = cleanDigits === "" ? 0 : Number(cleanDigits);
+    onChange?.(num);
+  };
+
+  const handleBlur = (e) => {
+    setIsFocused(false);
+    const num = localText === "" ? 0 : Number(localText);
+    if (num === 0) {
+      setLocalText("");
+    } else {
+      setLocalText(String(num));
+    }
+    onChange?.(num);
+    props.onBlur?.(e);
+  };
+
+  const displayVal = isFocused
+    ? localText
+    : (value === 0 || value === "0" || !value ? "" : String(value));
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      className={className}
+      disabled={disabled}
+      placeholder={placeholder}
+      value={displayVal}
+      onFocus={handleFocus}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      style={style}
+      {...props}
+    />
+  );
+}
+
 function loadLocal(key, fallback) {
   if (typeof window === "undefined") return fallback;
   try {
@@ -566,22 +655,15 @@ function SnoopyMoneyLoader({ isFading }) {
   ];
 
   useEffect(() => {
-    const target = 2774000;
-    const duration = 1500;
-    const steps = 30;
-    const stepTime = duration / steps;
-    const increment = target / steps;
-    let current = 0;
+    // Contador dinámico y continuo sin fin numérico: sube y sube rápidamente mientras carga la app
+    let current = 120000;
+    setAmount(current);
 
     const timer = setInterval(() => {
-      current += increment;
-      if (current >= target) {
-        setAmount(target);
-        clearInterval(timer);
-      } else {
-        setAmount(Math.round(current));
-      }
-    }, stepTime);
+      const jump = Math.floor(Math.random() * 240000) + 90000;
+      current += jump;
+      setAmount(current);
+    }, 60);
 
     return () => clearInterval(timer);
   }, []);
@@ -703,6 +785,172 @@ export default function App() {
   const [filtroPersonaHome, setFiltroPersonaHome] = useState("ambos"); // "ambos" | "david" | "eveth"
   const [confirmReset, setConfirmReset] = useState(false);
   const [viewChartScope, setViewChartScope] = useState("quincena");
+
+  // Estados para Gastos Fijos por Quincena y Guardado de Deudas
+  const [debtsSaved, setDebtsSaved] = useState(false);
+  const [gastosFijosSaved, setGastosFijosSaved] = useState(false);
+  const [filtroQuincenaGastos, setFiltroQuincenaGastos] = useState("todas"); // "todas" | "Q1" | "Q2"
+  const [filtroPersonaGastos, setFiltroPersonaGastos] = useState("todos"); // "todos" | "eveth" | "david"
+  const [newPlantillaGasto, setNewPlantillaGasto] = useState({
+    concepto: "",
+    monto: "",
+    quincena: "Q1",
+    asignado: "eveth",
+  });
+
+  const handleSaveDebts = () => {
+    saveKeyWithSync("finanzas:debts", debts);
+    setDebtsSaved(true);
+    setTimeout(() => setDebtsSaved(false), 3000);
+  };
+
+  const handleSaveGastosFijos = () => {
+    saveKeyWithSync("finanzas:templates", templates);
+    if (active && templates[active.tipo]) {
+      const currentTemplateGastos = templates[active.tipo].gastosFijos || [];
+      const existingMap = new Map((active.gastosFijos || []).map((g) => [g.id, g]));
+      const updatedActiveGastos = currentTemplateGastos.map((tg) => {
+        const prev = existingMap.get(tg.id);
+        return {
+          ...tg,
+          pagado: prev ? prev.pagado : false,
+          pagadoPor: prev ? prev.pagadoPor : null,
+        };
+      });
+      const imprevistos = (active.gastosFijos || []).filter((g) => g.tipoGasto === "imprevisto");
+      const newActive = {
+        ...active,
+        gastosFijos: [...updatedActiveGastos, ...imprevistos],
+      };
+      setActive(newActive);
+      saveKeyWithSync("finanzas:active", newActive);
+    }
+    setGastosFijosSaved(true);
+    setTimeout(() => setGastosFijosSaved(false), 3000);
+  };
+
+  const updateTemplateGasto = (quincenaKey, gastoId, patch) => {
+    const currentList = templates[quincenaKey]?.gastosFijos || [];
+    const updatedList = currentList.map((g) => (g.id === gastoId ? { ...g, ...patch } : g));
+    setTemplates({
+      ...templates,
+      [quincenaKey]: {
+        ...templates[quincenaKey],
+        gastosFijos: updatedList,
+      },
+    });
+  };
+
+  const removeTemplateGasto = (quincenaKey, gastoId) => {
+    const currentList = templates[quincenaKey]?.gastosFijos || [];
+    setTemplates({
+      ...templates,
+      [quincenaKey]: {
+        ...templates[quincenaKey],
+        gastosFijos: currentList.filter((g) => g.id !== gastoId),
+      },
+    });
+  };
+
+  const moveTemplateGastoQuincena = (fromQ, toQ, gastoId) => {
+    if (fromQ === toQ) return;
+    const currentItem = (templates[fromQ]?.gastosFijos || []).find((g) => g.id === gastoId);
+    if (!currentItem) return;
+
+    if (toQ === "ambas") {
+      const otherQ = fromQ === "Q1" ? "Q2" : "Q1";
+      const copyItem = { ...currentItem, id: uid() };
+      setTemplates({
+        ...templates,
+        [otherQ]: {
+          ...templates[otherQ],
+          gastosFijos: [...(templates[otherQ]?.gastosFijos || []), copyItem],
+        },
+      });
+    } else {
+      const fromList = (templates[fromQ]?.gastosFijos || []).filter((g) => g.id !== gastoId);
+      const toList = [...(templates[toQ]?.gastosFijos || []), currentItem];
+      setTemplates({
+        ...templates,
+        [fromQ]: { ...templates[fromQ], gastosFijos: fromList },
+        [toQ]: { ...templates[toQ], gastosFijos: toList },
+      });
+    }
+  };
+
+  const addTemplateGasto = () => {
+    if (!newPlantillaGasto.concepto.trim() || !newPlantillaGasto.monto) return;
+    const montoNum = Number(newPlantillaGasto.monto);
+    const conceptoTrim = newPlantillaGasto.concepto.trim();
+
+    if (newPlantillaGasto.quincena === "ambas") {
+      const itemQ1 = {
+        id: uid(),
+        concepto: conceptoTrim,
+        monto: montoNum,
+        asignado: newPlantillaGasto.asignado,
+        tipoGasto: "fijo",
+      };
+      const itemQ2 = {
+        id: uid(),
+        concepto: conceptoTrim,
+        monto: montoNum,
+        asignado: newPlantillaGasto.asignado,
+        tipoGasto: "fijo",
+      };
+      setTemplates({
+        ...templates,
+        Q1: { ...templates.Q1, gastosFijos: [...(templates.Q1?.gastosFijos || []), itemQ1] },
+        Q2: { ...templates.Q2, gastosFijos: [...(templates.Q2?.gastosFijos || []), itemQ2] },
+      });
+    } else {
+      const qKey = newPlantillaGasto.quincena;
+      const newItem = {
+        id: uid(),
+        concepto: conceptoTrim,
+        monto: montoNum,
+        asignado: newPlantillaGasto.asignado,
+        tipoGasto: "fijo",
+      };
+      setTemplates({
+        ...templates,
+        [qKey]: { ...templates[qKey], gastosFijos: [...(templates[qKey]?.gastosFijos || []), newItem] },
+      });
+    }
+
+    setNewPlantillaGasto({
+      concepto: "",
+      monto: "",
+      quincena: newPlantillaGasto.quincena,
+      asignado: newPlantillaGasto.asignado,
+    });
+  };
+
+  const gastosFijosQ1 = templates?.Q1?.gastosFijos || [];
+  const gastosFijosQ2 = templates?.Q2?.gastosFijos || [];
+
+  const totalGastosFijosQ1 = gastosFijosQ1.reduce((s, g) => s + (g.monto || 0), 0);
+  const evethGastosFijosQ1 = gastosFijosQ1.filter((g) => g.asignado === "eveth").reduce((s, g) => s + (g.monto || 0), 0);
+  const davidGastosFijosQ1 = gastosFijosQ1.filter((g) => g.asignado === "david").reduce((s, g) => s + (g.monto || 0), 0);
+
+  const totalGastosFijosQ2 = gastosFijosQ2.reduce((s, g) => s + (g.monto || 0), 0);
+  const evethGastosFijosQ2 = gastosFijosQ2.filter((g) => g.asignado === "eveth").reduce((s, g) => s + (g.monto || 0), 0);
+  const davidGastosFijosQ2 = gastosFijosQ2.filter((g) => g.asignado === "david").reduce((s, g) => s + (g.monto || 0), 0);
+
+  const listaGastosFijosCombinada = useMemo(() => {
+    const list = [];
+    (templates?.Q1?.gastosFijos || []).forEach((g) => list.push({ ...g, quincena: "Q1" }));
+    (templates?.Q2?.gastosFijos || []).forEach((g) => list.push({ ...g, quincena: "Q2" }));
+    return list;
+  }, [templates]);
+
+  const gastosFijosFiltrados = useMemo(() => {
+    return listaGastosFijosCombinada.filter((g) => {
+      const matchQ = filtroQuincenaGastos === "todas" || g.quincena === filtroQuincenaGastos;
+      const matchP = filtroPersonaGastos === "todos" || g.asignado === filtroPersonaGastos;
+      return matchQ && matchP;
+    });
+  }, [listaGastosFijosCombinada, filtroQuincenaGastos, filtroPersonaGastos]);
 
   const toggleExpandHistory = (id) => setExpandedHistoryIds((prev) => ({ ...prev, [id]: !prev[id] }));
 
@@ -981,9 +1229,26 @@ export default function App() {
     const capTotal = capDavid + capEveth;
 
     // 2. Distribución equilibrada de deudas
+    // Primero reservamos/deducimos las deudas asignadas individualmente (David o Eveth)
+    // para conocer la liquidez real disponible antes de repartir deudas compartidas ("ambos").
+    let committedSpecificDavid = 0;
+    let committedSpecificEveth = 0;
+
+    orderedDebts.forEach((d) => {
+      const ov = active.abonos[d.id];
+      const monto = ov ? ov.monto : (suggested[d.id] || 0);
+      const asignado = ov?.asignado || "ambos";
+      if (asignado === "david") {
+        committedSpecificDavid += monto;
+      } else if (asignado === "eveth") {
+        committedSpecificEveth += monto;
+      }
+    });
+
+    let remCapDavid = capDavid - committedSpecificDavid;
+    let remCapEveth = capEveth - committedSpecificEveth;
+
     const debtShares = {};
-    let remCapDavid = capDavid;
-    let remCapEveth = capEveth;
 
     orderedDebts.forEach((d) => {
       const ov = active.abonos[d.id];
@@ -996,23 +1261,50 @@ export default function App() {
       if (asignado === "david") {
         davidShare = monto;
         evethShare = 0;
-        remCapDavid = Math.max(0, remCapDavid - davidShare);
       } else if (asignado === "eveth") {
         davidShare = 0;
         evethShare = monto;
-        remCapEveth = Math.max(0, remCapEveth - evethShare);
       } else {
-        // "ambos" - distribución proporcional según capacidad restante para evitar que se pase del sueldo
-        const remCapTotal = remCapDavid + remCapEveth;
-        if (remCapTotal > 0) {
-          davidShare = Math.min(remCapDavid, Math.round(monto * (remCapDavid / remCapTotal)));
-          evethShare = monto - davidShare;
+        // "ambos" - distribución inteligente adaptada a lo que realmente hay disponible en cada bolsillo ("distribuir lo que hay")
+        const availableDavid = Math.max(0, remCapDavid);
+        const availableEveth = Math.max(0, remCapEveth);
+        const availableTotal = availableDavid + availableEveth;
+
+        if (availableTotal > 0) {
+          if (monto <= availableTotal) {
+            // El abono cabe dentro de la capacidad disponible conjunta:
+            // Se distribuye proporcionalmente a la capacidad disponible de cada uno
+            const ratioDavid = availableDavid / availableTotal;
+            davidShare = Math.round(monto * ratioDavid);
+            evethShare = monto - davidShare;
+
+            // Ajustar para que ninguno exceda su capacidad disponible
+            if (davidShare > availableDavid) {
+              davidShare = availableDavid;
+              evethShare = monto - davidShare;
+            } else if (evethShare > availableEveth) {
+              evethShare = availableEveth;
+              davidShare = monto - evethShare;
+            }
+          } else {
+            // El abono supera la capacidad disponible conjunta:
+            // Ambos aportan el 100% de lo disponible
+            davidShare = availableDavid;
+            evethShare = availableEveth;
+            // El déficit inevitable restante se divide en partes iguales
+            const exceso = monto - availableTotal;
+            const mitadExceso = Math.round(exceso / 2);
+            davidShare += mitadExceso;
+            evethShare += exceso - mitadExceso;
+          }
         } else {
+          // Ambos están en 0 o en déficit: dividir 50/50
           davidShare = Math.round(monto / 2);
           evethShare = monto - davidShare;
         }
-        remCapDavid = Math.max(0, remCapDavid - davidShare);
-        remCapEveth = Math.max(0, remCapEveth - evethShare);
+
+        remCapDavid -= davidShare;
+        remCapEveth -= evethShare;
       }
       debtShares[d.id] = { total: monto, david: davidShare, eveth: evethShare, asignado };
     });
@@ -1765,12 +2057,12 @@ export default function App() {
 
           <div className="dac-amount-box">
             <span className="dac-input-label">Abonar:</span>
-            <input
-              type="number"
+            <SmartNumericInput
               className="glass-input-sm text-right font-bold-input dac-monto-input"
               value={monto}
               disabled={pagado}
-              onChange={(e) => updateAbonoField(d.id, { monto: Number(e.target.value) })}
+              onChange={(val) => updateAbonoField(d.id, { monto: val })}
+              placeholder="$ 0"
             />
           </div>
         </div>
@@ -1831,6 +2123,22 @@ export default function App() {
               <span className="drawer-link-desc">Planificador en curso</span>
             </div>
             {activeTab === "home" && <span className="drawer-active-pill">Actual</span>}
+          </button>
+
+          <button
+            type="button"
+            className={"drawer-nav-link " + (activeTab === "gastosFijos" ? "active" : "")}
+            onClick={() => {
+              setActiveTab("gastosFijos");
+              setMenuOpen(false);
+            }}
+          >
+            <div className="drawer-icon-box icon-calendar"><Layers size={18} /></div>
+            <div className="drawer-link-texts">
+              <strong className="drawer-link-title">Gastos Fijos</strong>
+              <span className="drawer-link-desc">Presupuesto por quincena</span>
+            </div>
+            {activeTab === "gastosFijos" && <span className="drawer-active-pill">Actual</span>}
           </button>
 
           <button
@@ -1978,6 +2286,15 @@ export default function App() {
             >
               <Home size={16} />
               <span>Quincena Activa</span>
+            </button>
+
+            <button
+              type="button"
+              className={"desktop-nav-item " + (activeTab === "gastosFijos" ? "active" : "")}
+              onClick={() => setActiveTab("gastosFijos")}
+            >
+              <Layers size={16} />
+              <span>Gastos Fijos</span>
             </button>
 
             <button
@@ -2338,28 +2655,26 @@ export default function App() {
                     </div>
                     <div className="glass-item-row">
                       <span>Sueldo David</span>
-                      <input
-                        type="number"
+                      <SmartNumericInput
                         className="glass-input-sm text-right"
                         value={active.ingresos.david}
-                        onChange={(e) =>
+                        onChange={(val) =>
                           setActive({
                             ...active,
-                            ingresos: { ...active.ingresos, david: Number(e.target.value) },
+                            ingresos: { ...active.ingresos, david: val },
                           })
                         }
                       />
                     </div>
                     <div className="glass-item-row">
                       <span>Sueldo Eveth</span>
-                      <input
-                        type="number"
+                      <SmartNumericInput
                         className="glass-input-sm text-right"
                         value={active.ingresos.eveth}
-                        onChange={(e) =>
+                        onChange={(val) =>
                           setActive({
                             ...active,
-                            ingresos: { ...active.ingresos, eveth: Number(e.target.value) },
+                            ingresos: { ...active.ingresos, eveth: val },
                           })
                         }
                       />
@@ -2490,12 +2805,11 @@ export default function App() {
 
                             <div className="aef-input-group">
                               <label>Monto ($):</label>
-                              <input
-                                type="number"
+                              <SmartNumericInput
                                 className="glass-input-sm text-right font-bold-input"
                                 placeholder="$ 0"
                                 value={newExtra.monto}
-                                onChange={(ev) => setNewExtra({ ...newExtra, monto: ev.target.value })}
+                                onChange={(val) => setNewExtra({ ...newExtra, monto: val })}
                               />
                             </div>
                           </div>
@@ -2719,11 +3033,11 @@ export default function App() {
                               title={!g.pagado ? "A quién le toca pagar" : "Quién lo desembolsó"}
                             />
 
-                            <input
-                              type="number"
+                            <SmartNumericInput
                               className="glass-input-sm text-right"
                               value={g.monto}
-                              onChange={(e) => updateGasto(g.id, { monto: Number(e.target.value) })}
+                              onChange={(val) => updateGasto(g.id, { monto: val })}
+                              placeholder="$ 0"
                             />
                             <button
                               className="icon-btn-del"
@@ -2775,12 +3089,11 @@ export default function App() {
                               value={newGasto.asignado}
                               onChange={(p) => setNewGasto({ ...newGasto, asignado: p })}
                             />
-                            <input
-                              type="number"
+                            <SmartNumericInput
                               className="glass-input-sm text-right"
                               placeholder="Monto ($)"
                               value={newGasto.monto}
-                              onChange={(e) => setNewGasto({ ...newGasto, monto: e.target.value })}
+                              onChange={(val) => setNewGasto({ ...newGasto, monto: val })}
                             />
                           </div>
 
@@ -2871,36 +3184,7 @@ export default function App() {
                       </div>
                     ) : (
                       <div className="items-list">
-                        {/* 1. Deudas con pago asignado para esta quincena (siempre visibles) */}
-                        {debtsConPago.map((d) => renderDebtCard(d))}
-
-                        {/* 2. Deudas que están en cero (escondidas en el desplegable) */}
-                        {debtsEnCero.length > 0 && mostrarTodasDeudasHome && (
-                          <div className="zero-debts-accordion-list animate-fade-in">
-                            {debtsEnCero.map((d) => renderDebtCard(d))}
-                          </div>
-                        )}
-
-                        {/* Botón para desplegar / contraer las deudas en cero */}
-                        {debtsEnCero.length > 0 && (
-                          <button
-                            type="button"
-                            className="toggle-debts-btn"
-                            onClick={() => setMostrarTodasDeudasHome(!mostrarTodasDeudasHome)}
-                          >
-                            {!mostrarTodasDeudasHome ? (
-                              <>
-                                <ChevronDown size={14} />
-                                <span>Ver y abonar a otras deudas ({debtsEnCero.length} más)</span>
-                              </>
-                            ) : (
-                              <>
-                                <ChevronUp size={14} />
-                                <span>Ocultar deudas sin abono asignado</span>
-                              </>
-                            )}
-                          </button>
-                        )}
+                        {filteredDebts.map((d) => renderDebtCard(d))}
                       </div>
                     )}
 
@@ -3015,17 +3299,17 @@ export default function App() {
                               }
                               title="Quién lo aparta"
                             />
-                            <input
-                              type="number"
+                            <SmartNumericInput
                               className="glass-input-sm text-right"
-                              style={{ maxWidth: "80px" }}
+                              style={{ maxWidth: "95px" }}
                               value={active.ahorroProgramado?.monto || 0}
-                              onChange={(e) =>
+                              onChange={(val) =>
                                 setActive({
                                   ...active,
-                                  ahorroProgramado: { ...active.ahorroProgramado, monto: Number(e.target.value) },
+                                  ahorroProgramado: { ...active.ahorroProgramado, monto: val },
                                 })
                               }
+                              placeholder="$ 0"
                             />
                           </div>
                         )
@@ -3073,17 +3357,17 @@ export default function App() {
                               }
                               title="Quién lo asume"
                             />
-                            <input
-                              type="number"
+                            <SmartNumericInput
                               className="glass-input-sm text-right"
-                              style={{ maxWidth: "80px" }}
+                              style={{ maxWidth: "95px" }}
                               value={active.dineroLibre?.monto || 0}
-                              onChange={(e) =>
+                              onChange={(val) =>
                                 setActive({
                                   ...active,
-                                  dineroLibre: { ...active.dineroLibre, monto: Number(e.target.value) },
+                                  dineroLibre: { ...active.dineroLibre, monto: val },
                                 })
                               }
+                              placeholder="$ 0"
                             />
                           </div>
                         )
@@ -3136,6 +3420,280 @@ export default function App() {
                     <ArrowRight size={17} />
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            TAB: GASTOS FIJOS Y PRESUPUESTO RECURRENTE (POR QUINCENA)
+            ======================================================== */}
+        {activeTab === "gastosFijos" && (
+          <div className="tab-content animate-fade-in">
+            <div className="glass-card">
+              <div className="tab-header">
+                <div>
+                  <div className="flex-align-center gap-6">
+                    <h2>Gastos Fijos por Quincena</h2>
+                    {gastosFijosSaved && (
+                      <span className="auto-save-pill animate-fade-in">✓ Guardado correctamente</span>
+                    )}
+                  </div>
+                  <p className="sub-hint">
+                    Presupuesto base recurrente: consulta y modifica los gastos que se pagan en cada quincena (Q1, Q2 o Ambas) y su persona asignada.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="modern-btn-primary btn-save-prominent"
+                  onClick={handleSaveGastosFijos}
+                  title="Guardar cambios en gastos fijos"
+                >
+                  <Save size={16} />
+                  <span>{gastosFijosSaved ? "✓ Guardado con éxito" : "Guardar gastos fijos"}</span>
+                </button>
+              </div>
+
+              {/* Tarjetas de Resumen Q1 / Q2 / Total Mensual usando el mismo estilo balance-box */}
+              <div className="balances-row gf-summary-balances" style={{ marginBottom: "20px" }}>
+                <div className="balance-box gf-balance-box">
+                  <div className="b-header">
+                    <strong>1ª Quincena (Q1)</strong>
+                    <span className="gf-quincena-tag tag-q1">1 al 15</span>
+                  </div>
+                  <div className="b-main">
+                    <span className="b-label">Total presupuestado:</span>
+                    <strong className="b-amount text-blue">{fmt(totalGastosFijosQ1)}</strong>
+                  </div>
+                  <div className="b-footer">
+                    <span>Eveth: <strong>{fmt(evethGastosFijosQ1)}</strong></span>
+                    <span>David: <strong>{fmt(davidGastosFijosQ1)}</strong></span>
+                  </div>
+                </div>
+
+                <div className="balance-box gf-balance-box">
+                  <div className="b-header">
+                    <strong>2ª Quincena (Q2)</strong>
+                    <span className="gf-quincena-tag tag-q2">16 a fin de mes</span>
+                  </div>
+                  <div className="b-main">
+                    <span className="b-label">Total presupuestado:</span>
+                    <strong className="b-amount text-purple">{fmt(totalGastosFijosQ2)}</strong>
+                  </div>
+                  <div className="b-footer">
+                    <span>David: <strong>{fmt(davidGastosFijosQ2)}</strong></span>
+                    <span>Eveth: <strong>{fmt(evethGastosFijosQ2)}</strong></span>
+                  </div>
+                </div>
+
+                <div className="balance-box gf-balance-box stat-card-total">
+                  <div className="b-header">
+                    <strong>Total Mensual</strong>
+                    <span className="badge-tag-amortiza">Q1 + Q2</span>
+                  </div>
+                  <div className="b-main">
+                    <span className="b-label">Presupuesto fijo total:</span>
+                    <strong className="b-amount" style={{ color: "var(--emerald-dark)" }}>
+                      {fmt(totalGastosFijosQ1 + totalGastosFijosQ2)}
+                    </strong>
+                  </div>
+                  <div className="b-footer">
+                    <span>David: <strong>{fmt(davidGastosFijosQ1 + davidGastosFijosQ2)}</strong></span>
+                    <span>Eveth: <strong>{fmt(evethGastosFijosQ1 + evethGastosFijosQ2)}</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filtros de Vista: Todas / Q1 / Q2 y Por Persona */}
+              <div className="gf-filter-bar glass-inner-panel">
+                <div className="gf-pills-row">
+                  <span className="gf-filter-label">Quincena:</span>
+                  <button
+                    type="button"
+                    className={"gf-filter-pill " + (filtroQuincenaGastos === "todas" ? "active" : "")}
+                    onClick={() => setFiltroQuincenaGastos("todas")}
+                  >
+                    Todas ({listaGastosFijosCombinada.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={"gf-filter-pill " + (filtroQuincenaGastos === "Q1" ? "active active-q1" : "")}
+                    onClick={() => setFiltroQuincenaGastos("Q1")}
+                  >
+                    1ª Quincena Q1 ({templates.Q1?.gastosFijos?.length || 0})
+                  </button>
+                  <button
+                    type="button"
+                    className={"gf-filter-pill " + (filtroQuincenaGastos === "Q2" ? "active active-q2" : "")}
+                    onClick={() => setFiltroQuincenaGastos("Q2")}
+                  >
+                    2ª Quincena Q2 ({templates.Q2?.gastosFijos?.length || 0})
+                  </button>
+                </div>
+
+                <div className="gf-pills-row">
+                  <span className="gf-filter-label">Asignado:</span>
+                  <button
+                    type="button"
+                    className={"gf-filter-pill " + (filtroPersonaGastos === "todos" ? "active" : "")}
+                    onClick={() => setFiltroPersonaGastos("todos")}
+                  >
+                    Ambos
+                  </button>
+                  <button
+                    type="button"
+                    className={"gf-filter-pill " + (filtroPersonaGastos === "eveth" ? "active active-eveth" : "")}
+                    onClick={() => setFiltroPersonaGastos("eveth")}
+                  >
+                    Solo Eveth
+                  </button>
+                  <button
+                    type="button"
+                    className={"gf-filter-pill " + (filtroPersonaGastos === "david" ? "active active-david" : "")}
+                    onClick={() => setFiltroPersonaGastos("david")}
+                  >
+                    Solo David
+                  </button>
+                </div>
+              </div>
+
+              {/* Lista Editable de Gastos Fijos (Diseño Armonizado con Tarjetas Snoopy Bank) */}
+              <div className="gf-section-panel glass-inner-panel">
+                <div className="gf-section-header">
+                  <h3>Lista de gastos fijos ({gastosFijosFiltrados.length})</h3>
+                  <span className="sub-hint">Edita el concepto, quincena de pago, responsable o monto directamente.</span>
+                </div>
+
+                <div className="gf-cards-list">
+                  {gastosFijosFiltrados.length === 0 ? (
+                    <div className="empty-hint" style={{ padding: "28px 0", textAlign: "center" }}>
+                      No hay gastos fijos registrados con los filtros seleccionados.
+                    </div>
+                  ) : (
+                    gastosFijosFiltrados.map((item) => (
+                      <div className="gf-expense-item glass-inner-panel" key={`${item.quincena}_${item.id}`}>
+                        <div className="gf-item-left">
+                          <span className={"gf-quincena-tag " + (item.quincena === "Q1" ? "tag-q1" : "tag-q2")}>
+                            {item.quincena === "Q1" ? "1ª Quincena" : "2ª Quincena"}
+                          </span>
+                          <input
+                            type="text"
+                            className="gf-inline-concept"
+                            value={item.concepto}
+                            onChange={(e) =>
+                              updateTemplateGasto(item.quincena, item.id, { concepto: e.target.value })
+                            }
+                            placeholder="Nombre del gasto"
+                          />
+                        </div>
+
+                        <div className="gf-item-right">
+                          <select
+                            className="glass-select-sm"
+                            value={item.quincena}
+                            onChange={(e) =>
+                              moveTemplateGastoQuincena(item.quincena, e.target.value, item.id)
+                            }
+                            title="Cambiar quincena en la que se paga este gasto"
+                          >
+                            <option value="Q1">1ª Quincena (Q1)</option>
+                            <option value="Q2">2ª Quincena (Q2)</option>
+                            <option value="ambas">Ambas quincenas (+ duplicar)</option>
+                          </select>
+
+                          <SegmentedPersonBadge
+                            value={item.asignado}
+                            onChange={(p) =>
+                              updateTemplateGasto(item.quincena, item.id, { asignado: p })
+                            }
+                          />
+
+                          <div className="gf-monto-wrapper">
+                            <SmartNumericInput
+                              className="glass-input-sm text-right font-bold-input gf-monto-input"
+                              value={item.monto}
+                              onChange={(val) =>
+                                updateTemplateGasto(item.quincena, item.id, { monto: val })
+                              }
+                              placeholder="$ 0"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            className="icon-btn-del"
+                            onClick={() => removeTemplateGasto(item.quincena, item.id)}
+                            title="Eliminar gasto de plantilla"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Formulario para agregar nuevo gasto fijo */}
+              <div className="glass-inner-panel add-gf-panel">
+                <div className="add-gf-header">
+                  <Plus size={15} className="text-emerald" />
+                  <h3>Agregar nuevo gasto fijo a la plantilla</h3>
+                </div>
+                <div className="add-gf-grid">
+                  <input
+                    type="text"
+                    className="glass-input"
+                    placeholder="Concepto (ej. Netflix, Gimnasio, Seguro Médico, Arriendo)"
+                    value={newPlantillaGasto.concepto}
+                    onChange={(e) => setNewPlantillaGasto({ ...newPlantillaGasto, concepto: e.target.value })}
+                  />
+
+                  <div className="add-gf-inline-row">
+                    <select
+                      className="glass-select"
+                      value={newPlantillaGasto.quincena}
+                      onChange={(e) => setNewPlantillaGasto({ ...newPlantillaGasto, quincena: e.target.value })}
+                    >
+                      <option value="Q1">1ª Quincena (Q1)</option>
+                      <option value="Q2">2ª Quincena (Q2)</option>
+                      <option value="ambas">Ambas quincenas (Q1 y Q2)</option>
+                    </select>
+
+                    <SegmentedPersonBadge
+                      value={newPlantillaGasto.asignado}
+                      onChange={(p) => setNewPlantillaGasto({ ...newPlantillaGasto, asignado: p })}
+                    />
+
+                    <SmartNumericInput
+                      className="glass-input-sm text-right font-bold-input"
+                      placeholder="Monto ($)"
+                      value={newPlantillaGasto.monto}
+                      onChange={(val) => setNewPlantillaGasto({ ...newPlantillaGasto, monto: val })}
+                    />
+
+                    <button
+                      type="button"
+                      className="modern-btn-primary btn-emerald"
+                      onClick={addTemplateGasto}
+                    >
+                      <Plus size={14} />
+                      <span>Agregar a plantilla</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón de Guardado al final */}
+              <div className="gf-bottom-save-bar">
+                <button
+                  type="button"
+                  className="modern-btn-primary btn-save-prominent"
+                  onClick={handleSaveGastosFijos}
+                >
+                  <Save size={16} />
+                  <span>{gastosFijosSaved ? "✓ Gastos fijos guardados y sincronizados" : "Guardar gastos fijos"}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -3212,12 +3770,11 @@ export default function App() {
                       ))}
                     </select>
 
-                    <input
-                      type="number"
+                    <SmartNumericInput
                       className="glass-input-sm anio-input"
                       placeholder="Año"
                       value={newScheduled.anio}
-                      onChange={(e) => setNewScheduled({ ...newScheduled, anio: Number(e.target.value) })}
+                      onChange={(val) => setNewScheduled({ ...newScheduled, anio: val })}
                     />
 
                     <select
@@ -3230,12 +3787,11 @@ export default function App() {
                       <option value="ambas">Ambas quincenas</option>
                     </select>
 
-                    <input
-                      type="number"
+                    <SmartNumericInput
                       className="glass-input-sm text-right"
                       placeholder="Monto ($)"
                       value={newScheduled.monto}
-                      onChange={(e) => setNewScheduled({ ...newScheduled, monto: e.target.value })}
+                      onChange={(val) => setNewScheduled({ ...newScheduled, monto: val })}
                     />
 
                     <button className="modern-btn-primary btn-purple" onClick={addScheduledExpense}>
@@ -3268,17 +3824,28 @@ export default function App() {
                 <div>
                   <div className="flex-align-center gap-6">
                     <h2>Deudas Totales</h2>
-                    {debtAutoSaved && (
-                      <span className="auto-save-pill animate-fade-in">✓ Guardado automático</span>
+                    {debtsSaved && (
+                      <span className="auto-save-pill animate-fade-in">✓ Guardado correctamente</span>
                     )}
                   </div>
                   <p className="sub-hint">
-                    Vista simplificada: solo nombre y saldo visible. Pulsa "Detalles" para desplegar cuotas y fechas. Cambios autoguardados en tiempo real.
+                    Vista simplificada: solo nombre y saldo visible. Pulsa "Detalles" para desplegar cuotas y fechas.
                   </p>
                 </div>
-                <div className="debt-summary-pill">
-                  <span>Deuda global total:</span>
-                  <strong>{fmt(calculations.totalDeuda)}</strong>
+                <div className="flex-align-center gap-10">
+                  <button
+                    type="button"
+                    className="modern-btn-primary btn-save-prominent"
+                    onClick={handleSaveDebts}
+                    title="Guardar deudas en la base de datos"
+                  >
+                    <Save size={15} />
+                    <span>{debtsSaved ? "✓ Deudas guardadas" : "Guardar deudas"}</span>
+                  </button>
+                  <div className="debt-summary-pill">
+                    <span>Deuda global total:</span>
+                    <strong>{fmt(calculations.totalDeuda)}</strong>
+                  </div>
                 </div>
               </div>
 
@@ -3354,22 +3921,20 @@ export default function App() {
 
                               <div className="dac-meta-field">
                                 <label>Saldo pendiente ($):</label>
-                                <input
-                                  type="number"
+                                <SmartNumericInput
                                   className="glass-input-sm text-right font-bold-input"
                                   value={d.saldo}
-                                  onChange={(e) => updateDebt(d.id, { saldo: Number(e.target.value) })}
+                                  onChange={(val) => updateDebt(d.id, { saldo: val })}
                                 />
                               </div>
 
                               <div className="dac-meta-field">
                                 <label>Prioridad:</label>
-                                <input
-                                  type="number"
+                                <SmartNumericInput
                                   className="glass-input-sm"
                                   style={{ width: "60px" }}
                                   value={d.prioridad}
-                                  onChange={(e) => updateDebt(d.id, { prioridad: Number(e.target.value) })}
+                                  onChange={(val) => updateDebt(d.id, { prioridad: val })}
                                 />
                               </div>
                             </div>
@@ -3392,44 +3957,40 @@ export default function App() {
 
                               <div className="dac-meta-field">
                                 <label>Cuota mensual acordada:</label>
-                                <input
-                                  type="number"
+                                <SmartNumericInput
                                   className="glass-input-sm text-right"
                                   placeholder="0"
-                                  value={d.cuotaMensual || ""}
-                                  onChange={(e) => updateDebt(d.id, { cuotaMensual: Number(e.target.value) })}
+                                  value={d.cuotaMensual || 0}
+                                  onChange={(val) => updateDebt(d.id, { cuotaMensual: val })}
                                 />
                               </div>
 
                               <div className="dac-meta-field">
                                 <label>Cuotas pactadas (totales / rest):</label>
                                 <div className="cuotas-split-input">
-                                  <input
-                                    type="number"
+                                  <SmartNumericInput
                                     className="glass-input-sm"
                                     placeholder="Total"
-                                    value={d.cuotasTotales || ""}
-                                    onChange={(e) => updateDebt(d.id, { cuotasTotales: Number(e.target.value) })}
+                                    value={d.cuotasTotales || 0}
+                                    onChange={(val) => updateDebt(d.id, { cuotasTotales: val })}
                                   />
                                   <span>/</span>
-                                  <input
-                                    type="number"
+                                  <SmartNumericInput
                                     className="glass-input-sm"
                                     placeholder="Faltan"
-                                    value={d.cuotasRestantes || ""}
-                                    onChange={(e) => updateDebt(d.id, { cuotasRestantes: Number(e.target.value) })}
+                                    value={d.cuotasRestantes || 0}
+                                    onChange={(val) => updateDebt(d.id, { cuotasRestantes: val })}
                                   />
                                 </div>
                               </div>
 
                               <div className="dac-meta-field">
                                 <label>Abono a capital por cuota:</label>
-                                <input
-                                  type="number"
+                                <SmartNumericInput
                                   className="glass-input-sm text-right"
                                   placeholder="Ej. 700000"
-                                  value={d.amortizacionCapital || ""}
-                                  onChange={(e) => updateDebt(d.id, { amortizacionCapital: Number(e.target.value) })}
+                                  value={d.amortizacionCapital || 0}
+                                  onChange={(val) => updateDebt(d.id, { amortizacionCapital: val })}
                                 />
                                 {d.cuotaMensual > 0 && d.amortizacionCapital > 0 && (
                                   <small className="interest-calc">
@@ -3460,12 +4021,11 @@ export default function App() {
               <div className="glass-inner-panel add-debt-panel">
                 <h3>Agregar nueva deuda</h3>
                 <div className="add-debt-form-grid">
-                  <input
-                    type="number"
+                  <SmartNumericInput
                     className="glass-input-sm prio-input"
                     placeholder="Prio"
                     value={newDebt.prioridad}
-                    onChange={(e) => setNewDebt({ ...newDebt, prioridad: e.target.value })}
+                    onChange={(val) => setNewDebt({ ...newDebt, prioridad: val })}
                   />
                   <input
                     type="text"
@@ -3474,12 +4034,11 @@ export default function App() {
                     value={newDebt.concepto}
                     onChange={(e) => setNewDebt({ ...newDebt, concepto: e.target.value })}
                   />
-                  <input
-                    type="number"
+                  <SmartNumericInput
                     className="glass-input-sm text-right"
                     placeholder="Saldo total ($)"
                     value={newDebt.saldo}
-                    onChange={(e) => setNewDebt({ ...newDebt, saldo: e.target.value })}
+                    onChange={(val) => setNewDebt({ ...newDebt, saldo: val })}
                   />
                   <input
                     type="date"
@@ -3493,6 +4052,19 @@ export default function App() {
                     <span>Guardar deuda</span>
                   </button>
                 </div>
+              </div>
+
+              {/* Botón de Guardado al final de deudas */}
+              <div className="debts-bottom-save-bar">
+                <button
+                  type="button"
+                  className="modern-btn-primary btn-save-prominent"
+                  onClick={handleSaveDebts}
+                  title="Guardar deudas en la base de datos"
+                >
+                  <Save size={16} />
+                  <span>{debtsSaved ? "✓ Deudas guardadas y sincronizadas" : "Guardar todas las deudas"}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -3523,11 +4095,10 @@ export default function App() {
 
                   <div className="meta-edit-inline">
                     <span>Meta de ahorro:</span>
-                    <input
-                      type="number"
+                    <SmartNumericInput
                       className="glass-input-sm text-right"
                       value={savings.metaAhorro}
-                      onChange={(e) => setSavings({ ...savings, metaAhorro: Number(e.target.value) })}
+                      onChange={(val) => setSavings({ ...savings, metaAhorro: val })}
                     />
                   </div>
                 </div>
@@ -3547,12 +4118,11 @@ export default function App() {
                       value={newManualSavings.concepto}
                       onChange={(e) => setNewManualSavings({ ...newManualSavings, concepto: e.target.value })}
                     />
-                    <input
-                      type="number"
+                    <SmartNumericInput
                       className="glass-input-sm text-right"
                       placeholder="Monto ($)"
                       value={newManualSavings.monto}
-                      onChange={(e) => setNewManualSavings({ ...newManualSavings, monto: e.target.value })}
+                      onChange={(val) => setNewManualSavings({ ...newManualSavings, monto: val })}
                     />
                     <button className="modern-btn-primary btn-blue" onClick={addManualSaving}>
                       <Plus size={14} />
@@ -7479,6 +8049,315 @@ input[type=number] {
   margin: 0;
   min-height: 18px;
   transition: all 0.3s ease;
+}
+
+/* ========================================================
+   ESTILOS DE BOTÓN DE GUARDADO PROMINENTE Y VISTA GASTOS FIJOS
+   ======================================================== */
+.btn-save-prominent {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  font-weight: 600 !important;
+  padding: 10px 20px !important;
+  border-radius: 12px !important;
+  font-size: 13.5px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  color: #ffffff !important;
+  border: none !important;
+  cursor: pointer !important;
+}
+.btn-save-prominent:hover {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
+  transform: translateY(-1.5px) !important;
+}
+.btn-save-prominent:active {
+  transform: translateY(0) !important;
+}
+
+.gf-summary-balances {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+@media (max-width: 860px) {
+  .gf-summary-balances {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+.gf-balance-box {
+  background: rgba(255, 255, 255, 0.82) !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  border-radius: 14px !important;
+  padding: 14px 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03) !important;
+  transition: all 0.2s ease !important;
+}
+.gf-balance-box:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06) !important;
+}
+
+.gf-quincena-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.gf-quincena-tag.tag-q1 {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid rgba(59, 130, 246, 0.28);
+}
+.gf-quincena-tag.tag-q2 {
+  background: #f5f3ff;
+  color: #6d28d9;
+  border: 1px solid rgba(139, 92, 246, 0.28);
+}
+
+.gf-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+}
+.gf-pills-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.gf-filter-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+}
+.gf-filter-pill {
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+.gf-filter-pill:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(148, 163, 184, 0.8);
+}
+.gf-filter-pill.active {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+}
+.gf-filter-pill.active-q1.active {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+.gf-filter-pill.active-q2.active {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  border-color: #6d28d9;
+  color: #ffffff;
+}
+.gf-filter-pill.active-eveth.active {
+  background: linear-gradient(135deg, #ec4899, #db2777);
+  border-color: #db2777;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(219, 39, 119, 0.28);
+}
+.gf-filter-pill.active-david.active {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-color: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+}
+
+.gf-section-panel {
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-bottom: 24px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+}
+.gf-section-header {
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+.gf-section-header h3 {
+  margin: 0 0 4px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.gf-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gf-expense-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
+}
+.gf-expense-item:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(203, 213, 225, 0.9);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  transform: translateY(-1px);
+}
+.gf-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.gf-item-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.gf-inline-concept {
+  flex: 1;
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-dark);
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  min-width: 130px;
+}
+.gf-inline-concept:hover,
+.gf-inline-concept:focus {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(203, 213, 225, 0.9);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+.glass-select-sm {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(203, 213, 225, 0.85);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+}
+.glass-select-sm:hover,
+.glass-select-sm:focus {
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+.gf-monto-wrapper {
+  display: inline-flex;
+  align-items: center;
+}
+.gf-monto-input {
+  width: 120px;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: var(--text-dark) !important;
+}
+
+.add-gf-panel {
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+}
+.add-gf-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.add-gf-header h3 {
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+.add-gf-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.add-gf-inline-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.add-gf-inline-row > * {
+  flex: 1 1 auto;
+}
+
+.gf-bottom-save-bar,
+.debts-bottom-save-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 0 8px;
+}
+@media (max-width: 768px) {
+  .gf-expense-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .gf-item-right {
+    justify-content: space-between;
+    width: 100%;
+  }
 }
 
 .footer-brand-hint {
