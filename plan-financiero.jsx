@@ -1032,15 +1032,28 @@ export default function App() {
           window.localStorage.setItem("finanzas:last_saved_time", JSON.stringify(cloudData["finanzas:last_saved_time"]));
         }
       } else if (cloudData !== null) {
-        // D1 está activo pero vacío (primer despliegue). Subimos los datos base a la nube.
-        saveBatchWithSync({
-          "finanzas:debts": localDebts,
-          "finanzas:templates": localTemplates,
-          "finanzas:scheduled": localScheduled,
-          "finanzas:active": localActive || active,
-          "finanzas:history": localHistory,
-          "finanzas:savings": localSavings,
-        });
+        // D1 está activo pero vacío.
+        // IMPORTANTE: Solo subir datos locales a la nube si este dispositivo
+        // tiene un historial de guardado real (last_saved_time). Esto evita que
+        // un dispositivo nuevo/sin datos sobrescriba la nube con valores vacíos.
+        const localLastSaved = loadLocal("finanzas:last_saved_time", null);
+        if (localLastSaved) {
+          // Este dispositivo ya ha guardado datos antes → es el dispositivo original
+          saveBatchWithSync({
+            "finanzas:debts": localDebts,
+            "finanzas:templates": localTemplates,
+            "finanzas:scheduled": localScheduled,
+            "finanzas:active": localActive || active,
+            "finanzas:history": localHistory,
+            "finanzas:savings": localSavings,
+          });
+        } else {
+          // Dispositivo nuevo o sin datos locales → solo leer, nunca sobrescribir
+          console.info(
+            "[Sync] Dispositivo nuevo detectado. La nube no tiene datos aún. " +
+            "Esperando primer guardado manual desde este dispositivo."
+          );
+        }
       }
 
       // Marcamos como cargado para habilitar la persistencia automática de cambios futuros
